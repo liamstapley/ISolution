@@ -1,0 +1,13 @@
+{
+  "name": "react-fastapi-concurrently",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && .\\.venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
