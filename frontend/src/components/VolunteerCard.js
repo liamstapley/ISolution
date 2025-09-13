@@ -35,19 +35,22 @@ export default function VolunteerCard({
               <ul className="vol-list">
                 {activities.map((a) => (
                   <li key={a.id} className="vol-card">
-                    <div className="vol-logo" aria-hidden="true">
-                      {a.org?.[0] ?? "V"}
+                    <div className="vol-logo-div" aria-hidden="true">
+                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      {/* Picture not working for some reason */}
+                      {/* {a.org?.[0] ?? "V"} */}
                     </div>
+                    <div className="vol-name">{a.title}</div>
                     <div className="vol-meta">
-                      <div className="vol-name">{a.title}</div>
                       <div className="vol-rating" aria-label={`${a.rating} out of 5 stars`}>
                         {"★".repeat(a.rating)}
                         {"☆".repeat(5 - a.rating)}
                       </div>
+                      <button className="signup-btn" onClick={() => signup(a)}>                      Sign Up
+                      </button>
+
                     </div>
-                    <button className="signup-btn" onClick={() => signup(a)}>
-                      Sign Up
-                    </button>
+
                   </li>
                 ))}
               </ul>
