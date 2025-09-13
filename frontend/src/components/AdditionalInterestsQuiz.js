@@ -27,7 +27,7 @@ export default function AdditionalInterestsQuiz({
 
   const CAUSE_OPTIONS = useMemo(
     () => [
-      "Environment","Climate Action","Animal Welfare","Wildlife Conservation","Education Equity","Literacy","Public Health","Mental Health","Disability Rights & Accessibility","Racial Justice","Gender Equality","LGBTQ+ Rights","Poverty Alleviation","Homelessness Relief","Food Security","Clean Water & Sanitation","Criminal Justice Reform","Voting Rights & Civic Engagement","Immigration & Refugee Support","Human Rights","Anti-Corruption & Government Transparency","Digital Privacy & Data Rights","AI Safety & Ethics","Arts & Culture Access","Veteran Support",
+      "Environment","Climate Action","Animal Welfare","Mental Health","Literacy","Wildlife Conservation","Education Equity","Public Health","Criminal Justice Reform","Ethics","Food Security","Racial Justice","Accessibility","Digital Privacy","Gender Equality","LGBTQ+ Rights","Poverty Alleviation","Arts & Culture","Veteran Support","Human Rights","Homelessness Relief","Immigration","Clean Water & Sanitation","Civic Engagement",
     ],
     []
   );
@@ -231,9 +231,9 @@ export default function AdditionalInterestsQuiz({
           )}
         </div>
 
-        <div className="helper text-sm text-slate-500 mt-2">
+        {/* <div className="helper text-sm text-slate-500 mt-2">
           Choose exactly 3 on each step. Use the dropdown to pick, and remove a chip to change your selection.
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+
+
 .min-h-\[70vh\] { min-height: 70vh; }
 .w-full { width: 100%; }
 .max-w-2xl { max-width: 42rem; }            /* 672px */
@@ -114,3 +116,8 @@ button:focus-visible {
 
 /* Prevent menu from overflowing rounded parent edges */
 .rounded-2xl.overflow-auto { -webkit-mask-image: -webkit-radial-gradient(white, black); }
+
+div.field {
+  display: flex;
+  flex-wrap: wrap;
+}

@@ -77,7 +77,7 @@ export default function QuizPage({ page, answers, onChange }) {
             </div>
 
             {/* Chips for selected (if multi) */}
-            {f.type === "multi" && Array.isArray(answers?.[f.id]) && (
+            {/* {f.type === "multi" && Array.isArray(answers?.[f.id]) && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {answers[f.id].map((opt) => (
                   <span key={opt} className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
@@ -93,9 +93,9 @@ export default function QuizPage({ page, answers, onChange }) {
                   </span>
                 ))}
               </div>
-            )}
+            )} */}
 
-            {/* Optional helper / constraints */}
+            {/* Optional helper / constraints
             {(f.max || f.requiredCount || f.helper) && (
               <p className="mt-2 text-sm text-slate-500">
                 {f.helper ??
@@ -105,7 +105,7 @@ export default function QuizPage({ page, answers, onChange }) {
                     ? `You can choose up to ${f.max}.`
                     : "")}
               </p>
-            )}
+            )} */}
           </div>
         );
       })}
