@@ -1,11 +1,12 @@
 import React from "react";
-import "./TextSwiper.css";  // reuse .stage, .box, .content styles from your swiper
+import "./TextSwiper.css";  // reuse .stage, .box, .content styles
 import "./HomeCard.css";
 
 export default function HomeCard({
   width = 360,
   height = 560,
-  onChoose, // (value) => void
+  onChoose,     // (value) => void
+  onLearnMore,  // ✅ new prop for the "learn more" link
 }) {
   const stageStyle = { width, height };
 
@@ -40,7 +41,17 @@ export default function HomeCard({
                 </button>
               </div>
 
-              <div className="home-hint">Let us learn more</div>
+              {/* ✅ clickable learn more */}
+              <div className="home-hint">
+                Let us{" "}
+                <button
+                  type="button"
+                  className="home-link"
+                  onClick={onLearnMore}
+                >
+                  learn more
+                </button>
+              </div>
             </div>
           </div>
         </div>

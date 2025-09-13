@@ -1,0 +1,66 @@
+.additional-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.additional-title {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.additional-sub {
+  margin: 12px 0 24px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.additional-buttons {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 24px;
+}
+
+.btn-additional {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.5px solid #cfd6e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+  transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+}
+
+.btn-additional:hover {
+  transform: translateY(-1px);
+  background: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Back button */
+.additional-back {
+  margin-top: auto;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+
+.additional-back:hover {
+  background: #e2e8f0;
+}
