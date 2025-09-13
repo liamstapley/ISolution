@@ -10,6 +10,7 @@ import VolunteerCard from "./components/VolunteerCard";
 import SocialCard from "./components/SocialCard";
 import FriendsCard from "./components/FriendsCard";
 import CareersCard from "./components/CareersCard";
+import LocationQuiz from "./components/LocationQuiz";
 
 import "./components/TextSwiper.css";
 import "./app.css";
@@ -89,6 +90,16 @@ export default function App() {
           onDone={(answers) => {
             console.log("Interests/Causes saved:", answers);
             // e.g., api.saveQuiz("interests_causes", answers);
+            setView("additional"); // back to Additional Info page
+          }}
+        />
+      )}
+      {view === "location" && (
+        <LocationQuiz
+          {...cardSize}
+          onDone={(answers) => {
+            console.log("Location saved:", answers);
+            // e.g., api.saveQuiz("location", answers);
             setView("additional"); // back to Additional Info page
           }}
         />
