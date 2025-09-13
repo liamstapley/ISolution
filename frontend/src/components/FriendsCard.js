@@ -35,19 +35,21 @@ export default function FriendsCard({
               <ul className="vol-list">
                 {people.map((p) => (
                   <li key={p.id} className="vol-card">
-                    <div className="vol-logo" aria-hidden="true">
-                      {p.org?.[0] ?? "P"}
+                    <div className="vol-logo-div" aria-hidden="true">
+                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      {/* Picture not working for some reason */}
+                      {/* {a.org?.[0] ?? "V"} */}
                     </div>
+                    <div className="vol-name">{p.title}</div>
                     <div className="vol-meta">
-                      <div className="vol-name">{p.title}</div>
                       <div className="vol-rating" aria-label={`${p.rating} out of 5 stars`}>
                         {"★".repeat(p.rating)}
                         {"☆".repeat(5 - p.rating)}
                       </div>
+                      <button className="signup-btn" onClick={() => connect(p)}>Connect</button>
+
                     </div>
-                    <button className="signup-btn" onClick={() => connect(p)}>
-                      Connect
-                    </button>
+
                   </li>
                 ))}
               </ul>
