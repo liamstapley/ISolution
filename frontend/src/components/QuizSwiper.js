@@ -8,7 +8,7 @@ export default function QuizSwiper({
   width = 360,
   height = 560,
   durationMs = 320,
-  onSubmit // optional callback(answers)
+  onDone // optional callback(answers)
 }) {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState("idle"); // idle | exit | enter
@@ -58,7 +58,7 @@ export default function QuizSwiper({
   const goPrev = () => animateTo("left", index - 1);
 
   const submit = async () => {
-    if (onSubmit) onSubmit(answers);
+    if (onDone) onDone(answers);
     // Example POST to your FastAPI backend:
     // await fetch("/api/quiz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(answers) });
     alert("Submitted! " + JSON.stringify(answers, null, 2));

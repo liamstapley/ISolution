@@ -5,7 +5,7 @@ import HomeCard from "./components/HomeCard";
 import AdditionalInfoCard from "./components/AdditionalInfoCard";
 import PersonalityQuiz from "./components/PersonalityQuiz";
 import InterestsCausesQuiz from "./components/AdditionalInterestsQuiz";
-
+import IntroQuiz from "./components/QuizSwiper.js";
 import VolunteerCard from "./components/VolunteerCard";
 import SocialCard from "./components/SocialCard";
 import FriendsCard from "./components/FriendsCard";
@@ -31,7 +31,7 @@ export default function App() {
           onLogin={({ registered }) => {
             // If they just registered -> go to intro survey
             // If they just logged in -> go to home
-            setView(registered ? "personality_intro" : "home");
+            setView(registered ? "introQuiz" : "home");
           }}
         />
       )}
@@ -66,8 +66,8 @@ export default function App() {
       )}
 
       {/* INTRO SURVEY (after register) */}
-      {view === "personality_intro" && (
-        <PersonalityQuiz
+      {view === "introQuiz" && (
+        <IntroQuiz
           {...cardSize}
           onDone={() => setView("home")} // after intro survey, go to home
         />
