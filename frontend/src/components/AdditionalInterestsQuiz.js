@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import QuizPage from "./QuizPage";              // your shared renderer
 import "./quiz.css";
 import "./TextSwiper.css";
+import { apiAuthPost } from "../api";
 
 /**
  * AdditionalInterestsQuiz (Swiper)
@@ -137,33 +138,40 @@ export default function AdditionalInterestsQuiz({
   })();
 
   const submit = async () => {
-    const interests = Array.isArray(answers.interests) ? answers.interests : [];
-    const causes = Array.isArray(answers.causes) ? answers.causes : [];
+  const interests = Array.isArray(answers.interests) ? answers.interests : [];
+  const causes = Array.isArray(answers.causes) ? answers.causes : [];
 
-    // Guard: enforce exactly 3 on final submit too
-    if (interests.length !== 3 || causes.length !== 3) return;
+  // Guard: enforce exactly 3 on final submit too
+  if (interests.length !== 3 || causes.length !== 3) return;
 
-    const logSection = async (section, data) => {
-      if (typeof log === "function") return log(section, data);
-      if (typeof window !== "undefined" && typeof window.logQuizResult === "function") {
-        return window.logQuizResult(section, data);
-      }
-      // fallback logging
-      console.log("[Quiz Log]", section, data);
-    };
-
-    setSubmitting(true);
-    try {
-      await logSection("interests", { selected: interests });
-      await logSection("causes", { selected: causes });
-      onDone?.(); // parent handles navigation back to Additional Info
-    } catch (e) {
-      console.error("Failed to save Additional Interests/Causes:", e);
-      alert(e.message || "Failed to save your answers");
-    } finally {
-      setSubmitting(false);
+  const logSection = async (section, data) => {
+    if (typeof log === "function") return log(section, data);
+    if (typeof window !== "undefined" && typeof window.logQuizResult === "function") {
+      return window.logQuizResult(section, data);
     }
+    // fallback logging
+    console.log("[Quiz Log]", section, data);
   };
+
+  setSubmitting(true);
+  try {
+    // NEW: persist to backend for the logged-in user
+    await apiAuthPost("/api/profile/interests", { selected: interests });
+    await apiAuthPost("/api/profile/causes",    { selected: causes });
+
+    // Original logging behavior
+    await logSection("interests", { selected: interests });
+    await logSection("causes", { selected: causes });
+
+    onDone?.(); // parent handles navigation back to Additional Info
+  } catch (e) {
+    console.error("Failed to save Additional Interests/Causes:", e);
+    alert(e.message || "Failed to save your answers");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   // ----- Stage / Anim classes -----
   const stageStyle = { width, height, "--duration": `${durationMs}ms` };
