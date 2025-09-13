@@ -3,9 +3,9 @@ import "./TextSwiper.css";   // reuses .stage, .box, .content styles
 import "./VolunteerCard.css";
 
 const DEFAULT_ACTIVITIES = [
-  { id: "trash",     title: "Trash Clean-Up",               org: "City Services", rating: 4 },
-  { id: "recycling", title: "Recycling Info Session",       org: "GreenHub",      rating: 3 },
-  { id: "shelter",   title: "Animal Shelter Volunteering",  org: "Happy Paws",    rating: 4 },
+  { id: "Social",     title: "Crab Feast for Haiti",        org: "High Hopes for Haiti", rating: 4 },
+  { id: "Social",     title: "Collage Making",       org: "Charmers Club",      rating: 3 },
+  { id: "Social",     title: "The Playlist Set",  org: "Mariska Moves",    rating: 4 },
 ];
 
 export default function VolunteerCard({

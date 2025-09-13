@@ -1,12 +1,18 @@
 import React from "react";
 import "./TextSwiper.css";   
 import "./VolunteerCard.css";  
+import crabPng from "./images/Crab-Feast-Haiti.png";
+import collagePng from "./images/Collage-Craft-Club.png";
+import playlistPng from "./images/Playlist-Set-Dance.jpg";
+import karaokePng from "./images/Karaoke-Night.jpg";
 
 const DEFAULT_EVENTS = [
-  { id: "game-night", title: "Game Night",                         org: "Community Center", rating: 5 },
-  { id: "climate-meet", title: "College Students for Climate — Meeting", org: "Climate Action Club", rating: 4 },
-  { id: "dog-meetup", title: "Dog Owner's Meetup",                 org: "City Parks",        rating: 4 },
+  { id: "Social",     title: "Crab Feast for Haiti",        org: "High Hopes for Haiti", rating: 4, img: crabPng},
+  { id: "Social",     title: "Collage Making",       org: "Charmers Club",      rating: 3, img: collagePng},
+  { id: "Social",     title: "The Playlist Set",  org: "Mariska Moves",    rating: 4, img: playlistPng},
+  {id: "Social", title: "Karaoke Night", org: "Max's Taphouse", rating: 5, img: karaokePng}
 ];
+
 
 export default function SocialCard({
   width = 360,
@@ -36,7 +42,7 @@ export default function SocialCard({
                 {events.map((ev) => (
                   <li key={ev.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
-                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      <img className="vol-logo" src={ev.img} alt="" width="300px" height="300px"/> 
                       {/* Picture not working for some reason */}
                       {/* {ev.org?.[0] ?? "V"} */}
                     </div>
@@ -48,7 +54,6 @@ export default function SocialCard({
                       </div>
                       <button className="signup-btn" onClick={() => signup(ev)}>                      Sign Up
                       </button>
-
                     </div>
 
                   </li>
