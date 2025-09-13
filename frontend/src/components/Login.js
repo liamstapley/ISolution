@@ -48,6 +48,7 @@ export default function Login({ onLogin }) {
       <h1 className="login-title">
         Welcome to <span className="brand">ISolution</span>
       </h1>
+      <div id="sunrise-root">
       <div id="sunrise1">sunrise1</div>
       <div id="sunrise2">sunrise2</div>
       <div className="login-content">
@@ -118,7 +119,7 @@ export default function Login({ onLogin }) {
         {mode === "login" ? "Need an account? Register" : "Have an account? Login"}
       </button>
       </div>
-
+      </div>
       {err && <p style={{color:"crimson",marginTop:10}}>{err}</p>}
     </div>
   );
