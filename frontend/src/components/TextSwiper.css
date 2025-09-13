@@ -1,0 +1,91 @@
+
+*, *::before, *::after { box-sizing: border-box; }
+
+.swiper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  outline: none;
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;         /* hides the sliding box when it moves out */
+  display: grid;
+  place-items: center;
+}
+
+/* The WHOLE rectangle (box) animates */
+.box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid #d0d5dd;
+  border-radius: 16px;
+  background: #f9fafb; /* light gray background */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform var(--duration) ease, opacity var(--duration) ease;
+  will-change: transform, opacity;
+}
+
+.content {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  line-height: 1.35;
+  font-size: 1.05rem;
+  padding: 0 16px;
+}
+
+/* EXIT: move the entire box off the stage */
+.slide-exit-left {
+  transform: translateX(-120%);
+  opacity: 0;
+}
+.slide-exit-right {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+/* ENTER: start off-screen then animate to center */
+.slide-enter-right {
+  animation: enter-from-right var(--duration) ease forwards;
+}
+.slide-enter-left {
+  animation: enter-from-left var(--duration) ease forwards;
+}
+
+@keyframes enter-from-right {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes enter-from-left {
+  from { transform: translateX(-120%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* Arrows outside the rectangle */
+.arrow {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f2f4f7;
+  color: #111827;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  transition: background 160ms ease, transform 160ms ease;
+  user-select: none;
+}
+
+.arrow:hover   { background: #e5e7eb; transform: scale(1.04); }
+.arrow:active  { background: #e2e8f0; transform: scale(0.98); }
+.arrow:focus   { outline: 2px solid #3b82f6; outline-offset: 2px; }
