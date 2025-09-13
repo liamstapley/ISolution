@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./Login.css";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -36,7 +37,7 @@ export default function Login({ onLogin }) {
       }).then(r => { if (!r.ok) throw new Error("login"); return r.json(); });
 
       localStorage.setItem("token", token.access_token);
-      onLogin?.();
+      onLogin?.({ registered: mode === "register" });
     } catch {
       setErr("Authentication failed");
     }
