@@ -16,6 +16,8 @@ from schemas import (
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut,
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user
+from embeddings_service import embed_document, embed_query, event_text
+import json, os
 
 app = FastAPI(title="ISolution API")
 
@@ -155,6 +157,27 @@ def create_event(
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    try:
+        text = event_text(
+            ev.title,
+            ev.tags or "",
+            ev.organizers or "",
+            ev.starts_at,
+            ev.location,
+            ev.description or "",
+        )
+        vec = embed_document(text)
+        ee = EventEmbedding(
+            event_id=ev.id,
+            vector=json.dumps(vec),
+            dim=len(vec),
+            model_name=os.getenv("GEMINI_EMBED_MODEL"),
+            task_type="RETRIEVAL_DOCUMENT",
+        )
+        db.add(ee)
+        db.commit()
+    except Exception as ex:
+        print("auto-embed event failed:", ex)
 
     return EventOut(
         id=ev.id,
@@ -244,6 +267,8 @@ def _decode_vec(s: str) -> List[float]:
     return json.loads(s)
 
 def _cosine(a: List[float], b: List[float]) -> float:
+    # Using the cos dot product formula to compare similarity of the vectors
+    # based on theta
     if not a or not b or len(a) != len(b):
         return 0.0
     import math

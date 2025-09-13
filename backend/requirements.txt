@@ -5,3 +5,6 @@ SQLAlchemy
 google-genai
 passlib
 python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+requests
