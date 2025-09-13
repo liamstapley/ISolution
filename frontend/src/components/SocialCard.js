@@ -35,19 +35,22 @@ export default function SocialCard({
               <ul className="vol-list">
                 {events.map((ev) => (
                   <li key={ev.id} className="vol-card">
-                    <div className="vol-logo" aria-hidden="true">
-                      {ev.org?.[0] ?? "E"}
+                    <div className="vol-logo-div" aria-hidden="true">
+                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      {/* Picture not working for some reason */}
+                      {/* {ev.org?.[0] ?? "V"} */}
                     </div>
+                    <div className="vol-name">{ev.title}</div>
                     <div className="vol-meta">
-                      <div className="vol-name">{ev.title}</div>
                       <div className="vol-rating" aria-label={`${ev.rating} out of 5 stars`}>
                         {"★".repeat(ev.rating)}
                         {"☆".repeat(5 - ev.rating)}
                       </div>
+                      <button className="signup-btn" onClick={() => signup(ev)}>                      Sign Up
+                      </button>
+
                     </div>
-                    <button className="signup-btn" onClick={() => signup(ev)}>
-                      Sign Up
-                    </button>
+
                   </li>
                 ))}
               </ul>

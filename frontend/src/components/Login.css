@@ -1,6 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; }
 
-.login-root { display: inline-block; }
+.login-root { display: inline-block; position: relative;}
 
 /* Inside the rectangle */
 .login-page {
@@ -43,6 +43,19 @@
   background: #ffffff;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
+}
+.login-content {
+  position: absolute;
+  border-top-left-radius: 50%; /* Adjust the value for desired roundness */
+  border-top-right-radius: 50%; /* Adjust the value for desired roundness */
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background-color: #F2D479;;
+  padding: 1rem;
+  padding-top: 5rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .login-input:focus {
@@ -101,4 +114,18 @@
 .error-text {
   color: crimson;
   margin: 6px 0 0;
+}
+form, h2 {
+  width: 80%;
+  
+}
+
+#sunrise1, #sunrise2 {
+  border-top-left-radius: 50%; /* Adjust the value for desired roundness */
+  border-top-right-radius: 50%; /* Adjust the value for desired roundness */
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background-color: #F27405;
+  height: 10rem;
+  position: absolute;
 }

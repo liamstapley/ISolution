@@ -45,6 +45,15 @@ export default function Login({ onLogin }) {
 
   return (
     <div style={{ maxWidth: 380, margin: "80px auto", fontFamily: "system-ui" }}>
+      <h1 className="login-title">
+        Welcome to <span className="brand">ISolution</span>
+      </h1>
+      <div id="sunrise1">sunrise1</div>
+      <div id="sunrise2">sunrise2</div>
+      <div className="login-content">
+
+
+
       <h2 style={{ marginBottom: 12 }}>
         {mode === "login" ? "Login" : "Register"}
       </h2>
@@ -108,6 +117,7 @@ export default function Login({ onLogin }) {
       >
         {mode === "login" ? "Need an account? Register" : "Have an account? Login"}
       </button>
+      </div>
 
       {err && <p style={{color:"crimson",marginTop:10}}>{err}</p>}
     </div>

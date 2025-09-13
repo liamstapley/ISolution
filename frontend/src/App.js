@@ -12,6 +12,7 @@ import FriendsCard from "./components/FriendsCard";
 import CareersCard from "./components/CareersCard";
 
 import "./components/TextSwiper.css";
+import "./app.css";
 
 export default function App() {
   // Start at the login screen

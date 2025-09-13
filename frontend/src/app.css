@@ -1,3 +1,10 @@
+/* Color Theme Swatches in Hex /
+.Sun-rays-on-sunset-sky-with-blue: { color: #30698C; }
+.Sun-rays-on-sunset-sky-with-peach: { color: #F2D479; }
+.Sun-rays-on-sunset-sky-with-gold: { color: #F2AE2E; }
+.Sun-rays-on-sunset-sky-with-orange: { color: #F27405; }
+.Sun-rays-on-sunset-sky-with-burnt: { color: #A63F03; } */
+
 h1 { /* currently regular not bold */
   font-family: "Coustard", serif;
   font-weight: 400;
@@ -29,4 +36,3 @@ button {
     align-items: center;
 
 }
- 
