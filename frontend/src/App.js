@@ -55,7 +55,8 @@ export default function App() {
       {view === "additional" && (
         <AdditionalInfoCard
           {...cardSize}
-          onBack={() => setView("home")}  // back to home
+          onHome={() => setView("home")}  // back to home
+          onBack={() => setView("additional")}  // back to additional
           onChoose={(val) => {
             if (val === "personality") setView("personality");
             if (val === "interests/causes") setView("interests/causes");
