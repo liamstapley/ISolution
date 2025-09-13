@@ -28,7 +28,6 @@
 }
 .vol-title {
   margin: 0;
-  text-align: center;
   font-size: 1.15rem;
   font-weight: 800;
 }
@@ -46,9 +45,11 @@
 /* individual card */
 .vol-card {
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-rows: 70% 30%;
+  grid-template-columns: 45% 55%;
+  /* grid-template-columns: 56px 1fr auto; */
   align-items: center;
-  gap: 12px;
+  /* gap: 12px; */
   padding: 12px;
   border: 1px solid #d0d5dd;
   border-radius: 14px;
@@ -56,18 +57,40 @@
 }
 
 /* logo placeholder */
-.vol-logo {
-  width: 56px; height: 56px;
+.vol-logo-div {
+  /* width: 56px; height: 56px; */
+  max-width: 6rem;
+  max-height: 6rem;
   border: 1px dashed #cbd5e1;
   border-radius: 10px;
-  display: grid; place-items: center;
   font-weight: 800; color: #64748b;
   background: #f8fafc;
+  grid-row: 1/span 2;
+  margin: .35em;
+}
+
+.vol-logo {
+  max-width: inherit;
+  max-height: inherit;
 }
 
 /* text */
-.vol-meta { display: grid; gap: 4px; }
-.vol-name { font-weight: 700; }
+.vol-meta {
+  gap: 1.75rem; 
+  grid-row-start: 2;
+  grid-column-start: 2;
+  display:flex; 
+  align-items: center;
+  justify-content: right;
+}
+.vol-name {
+  font-weight: 700;
+  font-size: 1.3rem;
+  text-align: center;
+  align-self: center;
+  padding-top: .5rem;
+  grid-row-start: 1;
+}
 .vol-rating { color: #f59e0b; font-size: 0.95rem; }
 
 /* sign up button */
@@ -80,6 +103,8 @@
   font-weight: 700;
   cursor: pointer;
   transition: opacity .15s ease, transform .15s ease;
+  height: 1.5rem;
+  width: 4rem;
 }
 .signup-btn:hover { transform: translateY(-1px); }
 .signup-btn:active { transform: translateY(0); opacity: .9; }
