@@ -5,6 +5,7 @@ import VolunteerCard from "./components/VolunteerCard";
 import SocialCard from "./components/SocialCard";
 import FriendsCard from "./components/FriendsCard";
 import CareersCard from "./components/CareersCard";
+import "./app.css"
 
 import "./components/TextSwiper.css"; // shared card styles (.stage, .box, .content)
 

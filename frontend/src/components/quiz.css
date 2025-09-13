@@ -1,7 +1,11 @@
-html, body, #root { height: 100%; margin: 0; }
-body { min-height: 100dvh; display: grid; place-items: center; }
 
-.quiz-root { display: grid; gap: 16px; }
+.quiz-root { 
+  display: grid; 
+  flex-direction: column;
+  justify-content: space-around;
+  /* flex-wrap: wrap; */
+
+}
 
 /* Reuse your .swiper, .stage, .box, .content, .arrow from TextSwiper.css */
 
@@ -39,7 +43,6 @@ body { min-height: 100dvh; display: grid; place-items: center; }
 
 .pill-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
   justify-content: center; /* keep pills centered */
 }

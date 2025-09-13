@@ -11,8 +11,8 @@
 .stage {
   position: relative;
   overflow: hidden;         /* hides the sliding box when it moves out */
-  display: grid;
-  place-items: center;
+  display: flex; 
+  justify-content: center;
 }
 
 /* The WHOLE rectangle (box) animates */
