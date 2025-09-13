@@ -1,22 +1,22 @@
-import React from "react";
-import QuizSwiper from "./components/QuizSwiper";
+import React, { useState } from "react";
 import HomeCard from "./components/HomeCard";
-import Login from "./pages/Login";
+import VolunteerCard from "./components/VolunteerCard";
+import "./components/TextSwiper.css"; // provides .stage, .box, .content
 
 export default function App() {
+  const [view, setView] = useState("home");
+
   return (
-    <div>
-      <HomeCard
-        width={360}
-        height={560}
-        onChoose={(val) => console.log("Picked:", val)}
-      />
-      <QuizSwiper
-        width={360}
-        height={560}
-        durationMs={320}
-        onSubmit={(answers) => console.log("answers:", answers)}
-      />
+    <div className="center-page">
+      {view === "home" ? (
+        <HomeCard
+          width={360}
+          height={560}
+          onChoose={(val) => { if (val === "volunteer") setView("volunteer"); }}
+        />
+      ) : (
+        <VolunteerCard width={360} height={560} onBack={() => setView("home")} />
+      )}
     </div>
   );
 }

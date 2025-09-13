@@ -1,5 +1,6 @@
 .home-root { display: inline-block; }
-
+html, body, #root { height: 100%; margin: 0; }
+.center-page { min-height: 100dvh; display: grid; place-items: center; }
 /* Inside the card */
 .home-page {
   width: 100%;
