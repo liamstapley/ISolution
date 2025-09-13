@@ -144,6 +144,8 @@ class EventOut(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+    score: Optional[float] = None
+
     @field_validator("tags", "organizers", "evidence_urls", mode="before")
     @classmethod
     def _split_csv(cls, v):
