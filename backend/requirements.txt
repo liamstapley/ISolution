@@ -5,8 +5,9 @@ SQLAlchemy
 google-genai
 passlib
 python-jose[cryptography]
-passlib[bcrypt]
+passlib[bcrypt]==1.7.4
 python-dotenv
 requests
 hnswlib
 numpy
+bcrypt==4.1.2
