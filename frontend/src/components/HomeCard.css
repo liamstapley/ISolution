@@ -18,14 +18,14 @@
   text-align: center;
 }
 
-.home-title {
+.home-title, .login-title {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: 0.2px;
 }
 
-.brand { color: #22c55e; } /* green accent for “ISolution” */
+.brand { color: #30698C; } /* green accent for “ISolution” */
 
 .home-sub {
   margin: 0;

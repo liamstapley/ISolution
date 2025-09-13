@@ -35,19 +35,21 @@ export default function CareersCard({
               <ul className="vol-list">
                 {items.map((it) => (
                   <li key={it.id} className="vol-card">
-                    <div className="vol-logo" aria-hidden="true">
-                      {it.org?.[0] ?? "C"}
+                    <div className="vol-logo-div" aria-hidden="true">
+                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      {/* Picture not working for some reason */}
+                      {/* {a.org?.[0] ?? "V"} */}
                     </div>
+                    <div className="vol-name">{it.title}</div>
                     <div className="vol-meta">
-                      <div className="vol-name">{it.title}</div>
                       <div className="vol-rating" aria-label={`${it.rating} out of 5 stars`}>
                         {"★".repeat(it.rating)}
                         {"☆".repeat(5 - it.rating)}
                       </div>
+                      <button className="signup-btn" onClick={() => apply(it)}>Sign Up</button>
+
                     </div>
-                    <button className="signup-btn" onClick={() => apply(it)}>
-                      Apply
-                    </button>
+
                   </li>
                 ))}
               </ul>

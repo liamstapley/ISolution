@@ -3,12 +3,13 @@ import quizPages from "../quizPages";
 import QuizPage from "./QuizPage";
 import "./quiz.css";
 import "./TextSwiper.css"; // reuse your swiper animations (box, stage, etc.)
+import { apiAuthPost } from "../api";
 
 export default function QuizSwiper({
   width = 360,
   height = 560,
   durationMs = 320,
-  onSubmit // optional callback(answers)
+  onDone // optional callback(answers)
 }) {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState("idle"); // idle | exit | enter
@@ -58,10 +59,14 @@ export default function QuizSwiper({
   const goPrev = () => animateTo("left", index - 1);
 
   const submit = async () => {
-    if (onSubmit) onSubmit(answers);
-    // Example POST to your FastAPI backend:
-    // await fetch("/api/quiz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(answers) });
-    alert("Submitted! " + JSON.stringify(answers, null, 2));
+    try {
+      // Map all answers for this multi-page quiz to backend
+      await apiAuthPost("/api/profile/quiz", answers);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save quiz answers");
+    }
+    if (onDone) onDone(answers);
   };
 
   // wire up style vars

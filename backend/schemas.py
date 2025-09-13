@@ -187,3 +187,18 @@ class UserQueryEmbeddingOut(BaseModel):
     task_type: Literal["RETRIEVAL_QUERY"]
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+# ---- Quiz save payloads ----
+from typing import Dict, Any
+
+class QuizAnswersIn(BaseModel):
+    # matches your quizPages.js ids (send any subset)
+    ageRange: Optional[str] = None
+    schoolStatus: Optional[str] = None
+    freeTime: Optional[str] = None
+    wakeTime: Optional[str] = None
+    sleepTime: Optional[str] = None
+    freeDays: Optional[List[str]] = None
+
+class StringListIn(BaseModel):
+    selected: List[str]

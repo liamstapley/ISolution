@@ -3,6 +3,7 @@ import personalityPages from "../personalityPages";
 import QuizPage from "./QuizPage";        // same renderer you already have
 import "./quiz.css";                      // same styles as the original survey
 import "./TextSwiper.css";                // .stage, .box, .content, animations
+import { apiAuthPost } from "../api";
 
 export default function PersonalityQuiz({
   width = 360,
@@ -14,6 +15,7 @@ export default function PersonalityQuiz({
   const [phase, setPhase] = useState("idle");
   const [dir, setDir] = useState("right");
   const [answers, setAnswers] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const nextIndexRef = useRef(index);
 
   const pages = personalityPages;
@@ -53,11 +55,30 @@ export default function PersonalityQuiz({
 
   const goPrev = () => animateTo("left", index - 1);
 
-  const submit = () => {
-    // Output answers in the same format (fieldId: value)
-    console.log("Personality Quiz Results:", answers);
-    alert("Personality Quiz Results:\n" + JSON.stringify(answers, null, 2));
-    onDone?.(answers); // parent will send user back to Additional Info
+  const submit = async () => {
+    // Build ["Question: Answer", ...] in quiz order using labels from personalityPages
+    const selected = [];
+    for (const p of pages) {
+      for (const f of p.fields) {
+        const v = answers[f.id];
+        if (v != null && v !== "") {
+          selected.push(`${f.label}: ${v}`);
+        }
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      await apiAuthPost("/api/profile/personality", { selected });
+      // optional: also persist raw answers if you later add a dedicated field
+      // await apiAuthPost("/api/profile/personality-raw", answers);
+      onDone?.(answers);
+    } catch (e) {
+      console.error("Failed to save personality:", e);
+      alert(e.message || "Failed to save personality");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const stageStyle = { width, height, "--duration": `${durationMs}ms` };

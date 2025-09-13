@@ -1,19 +1,24 @@
-import React, { useMemo, useState } from "react";
-import "./AdditionalInterestsQuiz.css";
+import React, { useMemo, useRef, useState } from "react";
+import QuizPage from "./QuizPage";              // your shared renderer
+import "./quiz.css";
+import "./TextSwiper.css";
+import { apiAuthPost } from "../api";
 
 /**
- * AdditionalInterestsQuiz
- * Two-step quiz: Interests (step 0) and Causes (step 1).
- * - Each step uses a dropdown-style multi-select (max 3 selections)
- * - Selections render as removable bubbles (chips)
- * - On Finish: logs results the same way as prior quizzes, then navigates back to the Additional Information page
- *
- * Props (all optional):
- * - onDone: () => void  // called after successful submit
- * - log: async (sectionKey: string, payload: any) => Promise<void> // your app's logging fn
- * - navigateToAdditional: () => void // custom navigation back to Additional Info page
+ * AdditionalInterestsQuiz (Swiper)
+ * - Two pages, both require EXACTLY 3 picks to advance.
+ * - Fields are declared as dropdown multi-selects; selected items show as chips.
+ * - onDone() is the ONLY navigation (parent should route back to Additional Info).
+ * - Optional `log(sectionKey, payload)` preserves your logging.
  */
-export default function AdditionalInterestsQuiz({ onDone, log, navigateToAdditional }) {
+export default function AdditionalInterestsQuiz({
+  onDone,
+  log,
+  width = 360,
+  height = 560,
+  durationMs = 320
+}) {
+  // ----- Options -----
   const INTEREST_OPTIONS = useMemo(
     () => [
       "Music","Art","Reading","Hiking","Coding","Math","Science","Photography","Writing","Cooking","Gardening","Traveling","Fitness","Running","Cycling","Yoga","Gaming","Film","Theater","Dance","Volunteering","Entrepreneurship","Robotics","Languages","Chess",
@@ -28,208 +33,215 @@ export default function AdditionalInterestsQuiz({ onDone, log, navigateToAdditio
     []
   );
 
-  const [step, setStep] = useState(0); // 0 = Interests, 1 = Causes
-  const [interests, setInterests] = useState([]);
-  const [causes, setCauses] = useState([]);
+  // ----- Pages (consumed by QuizPage) -----
+  // Hints: ui="dropdown", chips=true; requiredCount=3 to enforce exactly 3
+  const pages = useMemo(
+    () => [
+      {
+        id: "interestsPage",
+        title: "Your Interests",
+        fields: [
+          {
+            id: "interests",
+            label: "Pick exactly 3 interests",
+            type: "multi",
+            options: INTEREST_OPTIONS,
+            ui: "dropdown",
+            chips: true,
+            max: 3,
+            requiredCount: 3
+          },
+        ],
+      },
+      {
+        id: "causesPage",
+        title: "Causes You Care About",
+        fields: [
+          {
+            id: "causes",
+            label: "Pick exactly 3 causes",
+            type: "multi",
+            options: CAUSE_OPTIONS,
+            ui: "dropdown",
+            chips: true,
+            max: 3,
+            requiredCount: 3
+          },
+        ],
+      },
+    ],
+    [INTEREST_OPTIONS, CAUSE_OPTIONS]
+  );
+
+  // ----- Swiper state (same pattern as PersonalityQuiz) -----
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState("idle");
+  const [dir, setDir] = useState("right");
+  const nextIndexRef = useRef(index);
+
+  // ----- Answers -----
+  // { interests: string[], causes: string[] }
+  const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      // Try to log using app-provided function or window fallback
-      const logSection = async (section, data) => {
-        if (typeof log === "function") {
-          await log(section, data);
-        } else if (typeof window !== "undefined" && typeof window.logQuizResult === "function") {
-          await window.logQuizResult(section, data);
-        } else {
-          console.log("[Quiz Log]", section, data);
-        }
-      };
+  const total = pages.length;
+  const page = pages[index];
 
-      await logSection("interests", { selected: interests });
-      await logSection("causes", { selected: causes });
+  const clamp = (i) => (i + total) % total;
 
-      // Navigate back to Additional Information page
-      if (typeof navigateToAdditional === "function") {
-        navigateToAdditional();
-      } else if (typeof window !== "undefined" && window?.__APP_NAVIGATE__) {
-        window.__APP_NAVIGATE__("/additional");
-      } else if (typeof window !== "undefined") {
-        window.location.href = "/additional"; // simple fallback
+  const animateTo = (direction, nextIdx) => {
+    if (phase !== "idle") return;
+    setDir(direction);
+    nextIndexRef.current = clamp(nextIdx);
+    setPhase("exit");
+    setTimeout(() => {
+      setIndex(nextIndexRef.current);
+      setPhase("enter");
+      setTimeout(() => setPhase("idle"), durationMs);
+    }, durationMs);
+  };
+
+  const goNext = () => {
+    if (index === total - 1) return;
+    animateTo("right", index + 1);
+  };
+
+  const goPrev = () => animateTo("left", index - 1);
+
+  // Cap and de-dup multi-select values; `QuizPage` should call onChange(fieldId, value)
+  const handleChange = (fieldId, value) => {
+    setAnswers((prev) => {
+      let nextVal = value;
+      if (Array.isArray(value)) {
+        // find current field descriptor (from any page)
+        const fld = pages.flatMap(p => p.fields).find(f => f.id === fieldId);
+        const max = fld?.max ?? Infinity;
+        const uniq = Array.from(new Set(value));
+        nextVal = uniq.slice(0, max);
       }
-
-      if (typeof onDone === "function") onDone();
-    } catch (e) {
-      console.error("Failed to submit AdditionalInterestsQuiz:", e);
-      alert("Sorry, something went wrong saving your answers.");
-    } finally {
-      setSubmitting(false);
-    }
+      return { ...prev, [fieldId]: nextVal };
+    });
   };
 
-  return (
-    <div className="min-h-[70vh] w-full max-w-2xl mx-auto p-6 flex flex-col gap-6">
-      <Progress step={step} total={2} />
+  // EXACTLY-3 validator for each page
+  const pageIsValid = (() => {
+    return page.fields.every((f) => {
+      const v = answers[f.id];
+      if (f.requiredCount != null) {
+        return Array.isArray(v) && v.length === f.requiredCount;
+      }
+      if (f.required) {
+        return Array.isArray(v) ? v.length > 0 : Boolean(v);
+      }
+      return true;
+    });
+  })();
 
-      {step === 0 ? (
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold tracking-tight">Your Interests</h1>
-          <p className="text-slate-600">Pick up to 3 that you enjoy most.</p>
+  const submit = async () => {
+  const interests = Array.isArray(answers.interests) ? answers.interests : [];
+  const causes = Array.isArray(answers.causes) ? answers.causes : [];
 
-          <MultiSelectDropdown
-            label="Select interests"
-            options={INTEREST_OPTIONS}
-            selected={interests}
-            setSelected={setInterests}
-            max={3}
-          />
+  // Guard: enforce exactly 3 on final submit too
+  if (interests.length !== 3 || causes.length !== 3) return;
 
-          <div className="flex justify-between pt-2">
-            <button
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold shadow-sm"
-              onClick={() => setStep(1)}
-            >
-              Skip →
-            </button>
-            <button
-              className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-md disabled:opacity-50"
-              onClick={() => setStep(1)}
-            >
-              Next: Causes
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold tracking-tight">Causes You Care About</h1>
-          <p className="text-slate-600">Pick up to 3 causes you believe in.</p>
-
-          <MultiSelectDropdown
-            label="Select causes"
-            options={CAUSE_OPTIONS}
-            selected={causes}
-            setSelected={setCauses}
-            max={3}
-          />
-
-          <div className="flex justify-between pt-2">
-            <button
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold shadow-sm"
-              onClick={() => setStep(0)}
-            >
-              ← Back
-            </button>
-            <button
-              className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-md disabled:opacity-50"
-              disabled={submitting}
-              onClick={handleSubmit}
-            >
-              {submitting ? "Saving..." : "Finish"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MultiSelectDropdown({ label, options, selected, setSelected, max = 3 }) {
-  const [open, setOpen] = useState(false);
-  const limitReached = selected.length >= max;
-
-  const toggle = (opt) => {
-    const exists = selected.includes(opt);
-    if (exists) {
-      setSelected(selected.filter((o) => o !== opt));
-    } else {
-      if (limitReached) return;
-      setSelected([...selected, opt]);
+  const logSection = async (section, data) => {
+    if (typeof log === "function") return log(section, data);
+    if (typeof window !== "undefined" && typeof window.logQuizResult === "function") {
+      return window.logQuizResult(section, data);
     }
+    // fallback logging
+    console.log("[Quiz Log]", section, data);
   };
 
+  setSubmitting(true);
+  try {
+    // NEW: persist to backend for the logged-in user
+    await apiAuthPost("/api/profile/interests", { selected: interests });
+    await apiAuthPost("/api/profile/causes",    { selected: causes });
+
+    // Original logging behavior
+    await logSection("interests", { selected: interests });
+    await logSection("causes", { selected: causes });
+
+    onDone?.(); // parent handles navigation back to Additional Info
+  } catch (e) {
+    console.error("Failed to save Additional Interests/Causes:", e);
+    alert(e.message || "Failed to save your answers");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  // ----- Stage / Anim classes -----
+  const stageStyle = { width, height, "--duration": `${durationMs}ms` };
+  let boxClass = "box";
+  if (phase === "exit") {
+    boxClass += dir === "right" ? " slide-exit-left" : " slide-exit-right";
+  } else if (phase === "enter") {
+    boxClass += dir === "right" ? " slide-enter-right" : " slide-enter-left";
+  }
+
+  // CTA state
+  const atLast = index === total - 1;
+  const nextDisabled = !pageIsValid;
+  const submitDisabled = submitting || !pageIsValid; // page 2 must also be exactly 3
+
   return (
-    <div className="w-full">
-      <div className="relative">
-        <button
-          type="button"
-          className="w-full flex items-center justify-between gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm hover:shadow-md"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span className="text-left text-slate-700 font-medium">
-            {selected.length ? `${label} (${selected.length}/${max})` : label}
-          </span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+    <div className="quiz-root">
+      <div className="swiper" tabIndex={0}>
+        <button className="arrow" onClick={goPrev} disabled={index === 0}>
+          {"<"}
         </button>
 
-        {open && (
-          <div className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
-            <ul className="divide-y divide-slate-100">
-              {options.map((opt) => {
-                const active = selected.includes(opt);
-                const disabled = !active && limitReached;
-                return (
-                  <li key={opt}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(opt)}
-                      disabled={disabled}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-sm ${
-                        disabled ? "text-slate-300 cursor-not-allowed" : "text-slate-700 hover:bg-slate-50"
-                      } ${active ? "bg-blue-50" : ""}`}
-                    >
-                      <span>{opt}</span>
-                      {active && (
-                        <span className="text-xs font-semibold text-blue-700">Selected</span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="stage" style={stageStyle}>
+          <div className={boxClass}>
+            <div className="content">
+              <QuizPage page={page} answers={answers} onChange={handleChange} />
+            </div>
           </div>
-        )}
+        </div>
+
+        <button
+          className="arrow"
+          onClick={atLast ? submit : goNext}
+          disabled={atLast ? submitDisabled : nextDisabled}
+          title={
+            atLast
+              ? submitDisabled ? "Select exactly 3 to finish" : ""
+              : nextDisabled ? "Select exactly 3 to continue" : ""
+          }
+        >
+          {">"}
+        </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {selected.map((opt) => (
-          <Chip key={opt} label={opt} onRemove={() => toggle(opt)} />
-        ))}
-      </div>
+      <div className="quiz-footer">
+        <div className="dots">
+          {pages.map((_, i) => (
+            <span key={i} className={`dot ${i === index ? "dot--active" : ""}`} />
+          ))}
+        </div>
 
-      <p className="mt-2 text-sm text-slate-500">You can choose up to {max}.</p>
-    </div>
-  );
-}
+        <div className="footer-actions">
+          {index > 0 && (
+            <button className="ghost-btn" onClick={goPrev}>Back</button>
+          )}
 
-function Chip({ label, onRemove }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
-      {label}
-      <button
-        type="button"
-        className="ml-1 rounded-full p-0.5 hover:bg-slate-200"
-        onClick={onRemove}
-        aria-label={`Remove ${label}`}
-      >
-        ×
-      </button>
-    </span>
-  );
-}
+          {!atLast ? (
+            <button className="primary-btn" onClick={goNext} disabled={nextDisabled}>
+              Next
+            </button>
+          ) : (
+            <button className="primary-btn" onClick={submit} disabled={submitDisabled}>
+              {submitting ? "Saving..." : "Finish"}
+            </button>
+          )}
+        </div>
 
-function Progress({ step, total }) {
-  const pct = ((step + 1) / total) * 100;
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-slate-700">Additional Info Quiz</span>
-        <span className="text-sm text-slate-500">Step {step + 1} of {total}</span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-        <div className="h-full bg-blue-600" style={{ width: `${pct}%` }} />
+        <div className="helper text-sm text-slate-500 mt-2">
+          Choose exactly 3 on each step. Use the dropdown to pick, and remove a chip to change your selection.
+        </div>
       </div>
     </div>
   );

@@ -7,13 +7,13 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from database import Base, engine, get_db
-from models import User, Event, EventEmbedding, UserQueryEmbedding
-from schemas import (
+from .database import Base, engine, get_db
+from .models import User, Event, EventEmbedding, UserQueryEmbedding
+from .schemas import (
     UserCreate, Login, Token, UserOut,
     EventCreate, EventOut,
     EventEmbeddingCreate, EventEmbeddingOut,
-    UserQueryEmbeddingCreate, UserQueryEmbeddingOut,
+    UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user
 from embeddings_service import embed_document, embed_query, event_text
@@ -514,3 +514,64 @@ def rebuild_ann_index(
     key = (model_name, task_type, dim)
     count = ann_rebuild(key=key, dim=dim, all_items=items)
     return {"ok": True, "count": count}
+
+@app.post("/api/profile/quiz")
+def save_quiz_answers(
+    payload: QuizAnswersIn,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Map quiz answers -> user profile fields
+    if payload.schoolStatus:
+        current.school_or_career_type = payload.schoolStatus
+    if payload.wakeTime:
+        current.wake_time = payload.wakeTime
+    if payload.sleepTime:
+        current.sleep_time = payload.sleepTime
+    if payload.freeDays is not None:
+        current.preferred_days = _list_to_csv(payload.freeDays)
+
+    db.add(current)
+    db.commit()
+    db.refresh(current)
+    return {"ok": True}
+
+@app.post("/api/profile/personality")
+def set_personality(
+    payload: StringListIn,   # expects {"selected": ["Question: Answer", ...]} OR just ["..."]
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # If frontend sends ["Q: A", "Q2: A2", ...], join to one string for storage
+    current.personality_type = ",".join(payload.selected) if payload.selected else None
+    db.add(current)
+    db.commit()
+    return {"ok": True}
+
+@app.post("/api/profile/interests")
+def set_interests(
+    payload: StringListIn,   # {"selected": ["Music", "Coding", "Traveling"]}
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current.interests = _list_to_csv(payload.selected)
+    db.add(current)
+    db.commit()
+    return {"ok": True}
+
+@app.post("/api/profile/causes")
+def set_causes(
+    payload: StringListIn,   # {"selected": ["Climate Action", "Education Equity", "AI Safety"]}
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current.causes_interested = _list_to_csv(payload.selected)
+    db.add(current)
+    db.commit()
+    return {"ok": True}
+
+@app.post("/api/profile/location")
+def set_location(payload: dict, current: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    current.location = (payload.get("location") or "").strip() or None
+    db.add(current); db.commit()
+    return {"ok": True}
