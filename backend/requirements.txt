@@ -3,3 +3,5 @@ uvicorn[standard]
 python-dotenv
 SQLAlchemy
 google-genai
+jose
+passlib
