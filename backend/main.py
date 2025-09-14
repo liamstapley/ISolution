@@ -7,9 +7,9 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import Base, engine, get_db
-from .models import User, Event, EventEmbedding, UserQueryEmbedding
-from .schemas import (
+from database import Base, engine, get_db
+from models import User, Event, EventEmbedding, UserQueryEmbedding
+from schemas import (
     UserCreate, Login, Token, UserOut,
     EventCreate, EventOut,
     EventEmbeddingCreate, EventEmbeddingOut,

@@ -1,11 +1,15 @@
 import React from "react";
 import "./TextSwiper.css";  // .stage, .box, .content
 import "./VolunteerCard.css";   // reuse list/card styles
+import Fair from "./images/fair.png";
+import HopHacks from "./images/HopHacks.png";
+import HenHacks from "./images/HenHacks.png";
 
 const DEFAULT_CAREERS = [
-  { id: "career-fair", title: "Climate Career Fair",    org: "UD Careers", rating: 5 },
-  { id: "hop-hacks",   title: "HopHacks Hackathon",     org: "Hopkins",    rating: 4 },
-  { id: "mock-int",    title: "Mock Interview",         org: "Career Ctr", rating: 4 },
+  { id: "Career",    title: "HenHacks",         org: "University of Delaware", rating: 5, img: HenHacks },
+  { id: "Career", title: "Climate Career Fair",    org: "UD Careers", rating: 4, img: Fair },
+  { id: "Career",   title: "HopHacks Hackathon",     org: "Hopkins",    rating: 3, img: HopHacks },
+  
 ];
 
 export default function CareersCard({
@@ -36,7 +40,7 @@ export default function CareersCard({
                 {items.map((it) => (
                   <li key={it.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
-                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      <img className="vol-logo" src={it.img} alt="" width="300px" height="300px"/> 
                       {/* Picture not working for some reason */}
                       {/* {a.org?.[0] ?? "V"} */}
                     </div>

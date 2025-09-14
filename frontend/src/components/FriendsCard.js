@@ -32,7 +32,7 @@ export default function FriendsCard({
                 <div className="spacer" />
               </header>
 
-              <ul className="vol-list">
+               <ul className="vol-list">
                 {people.map((p) => (
                   <li key={p.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
@@ -41,6 +41,7 @@ export default function FriendsCard({
                       {/* {a.org?.[0] ?? "V"} */}
                     </div>
                     <div className="vol-name">{p.title}</div>
+                    <div className="vol-name">{p.title}</div>
                     <div className="vol-meta">
                       <div className="vol-rating" aria-label={`${p.rating} out of 5 stars`}>
                         {"★".repeat(p.rating)}
@@ -48,7 +49,10 @@ export default function FriendsCard({
                       </div>
                       <button className="signup-btn" onClick={() => connect(p)}>Connect</button>
 
+                      <button className="signup-btn" onClick={() => connect(p)}>Connect</button>
+
                     </div>
+
 
                   </li>
                 ))}
