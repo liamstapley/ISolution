@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState } from "react";
 import QuizPage from "./QuizPage";          // same renderer you already use
 import "./quiz.css";
 import "./TextSwiper.css";
+import { apiAuthPost } from "../api";       // ⬅️ added
 
 export default function LocationQuiz({
   width = 360,
@@ -73,16 +74,23 @@ export default function LocationQuiz({
 
   const submit = async () => {
     if (!pageIsValid || submitting) return;
+    const location = (answers.location || "").trim();
+
     setSubmitting(true);
     try {
+      // NEW: persist to backend for the logged-in user
+      await apiAuthPost("/api/profile/location", { location });
+
+      // Original logging behavior
       if (typeof log === "function") {
-        await log("location", { location: (answers.location || "").trim() });
+        await log("location", { location });
       } else if (typeof window !== "undefined" && typeof window.logQuizResult === "function") {
-        await window.logQuizResult("location", { location: (answers.location || "").trim() });
+        await window.logQuizResult("location", { location });
       } else {
-        console.log("[Quiz Log] location:", (answers.location || "").trim());
+        console.log("[Quiz Log] location:", location);
       }
-      onDone?.({ location: (answers.location || "").trim() });  // parent navigates back to Additional Information
+
+      onDone?.({ location });  // parent navigates back to Additional Information
     } catch (e) {
       console.error("Failed to save location:", e);
       alert(e.message || "Failed to save your location");

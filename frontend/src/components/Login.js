@@ -118,7 +118,7 @@ export default function Login({ onLogin }) {
         {mode === "login" ? "Need an account? Register" : "Have an account? Login"}
       </button>
       </div>
-
+      </div>
       {err && <p style={{color:"crimson",marginTop:10}}>{err}</p>}
     </div>
   );

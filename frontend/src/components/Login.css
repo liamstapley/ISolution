@@ -1,120 +1,226 @@
-*, *::before, *::after { box-sizing: border-box; }
-
-/* .login-root { display: flex; justify-content: center; align-items: flex-start; */
-/* } */
-
-/* Inside the rectangle */
-.login-page {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;       /* horizontal center */
-  justify-content: center;   /* vertical center */
-  gap: 1rem;
+/* ===== Page & Heading ===== */
+body {
+  margin: 0;
+  /* background: linear-gradient(180deg, #f3f6fb 0%, #eef3fa 60%, #eaf2fb 100%); */
+  color: #0f172a;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
+}
+.login-title {
+  position: relative;
+  z-index: 5;                 /* higher than #sunrise-root & card */
   text-align: center;
+  margin: 0 0 18px 0;
+  font-weight: 900;
+}
+
+/* Gradient brand text (with Safari-friendly fill) */
+.login-title .brand {
+  background: #0f172a;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;  /* Safari */
+}
+
+/* Fallback color if gradient-clip isn't supported */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .login-title .brand { color: #f08d2f; }
+}
+
+/* --- Keep sunrise behind everything interactive --- */
+#sunrise-root { position: relative; z-index: 1; }
+#sunrise1, #sunrise2 {
+  z-index: 0;                 /* below title & card */
+  pointer-events: none;       /* never block clicks */
 }
 
 .login-title {
-  z-index: 4;
-  font-size: 1.4rem;
-  font-weight: 800;
+  margin: 0 0 18px 0 !important;
+  text-align: center;
+  font-size: clamp(2rem, 3.2vw + 1rem, 2.6rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.02em;
+}
+.login-title .brand {
+  /* background: linear-gradient(180deg, #ffb24a 0%, #ff9a37 60%, #f58e2f 100%); */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
 }
 
-/* Form stack */
-.login-form {
-  width: 100%;
-  max-width: 320px;
-  display: grid;
-  gap: 10px;
-  text-align: left;          /* labels/inputs align nicely */
+/* ===== Sunrise Layer (uses your existing DOM) ===== */
+#sunrise-root {
+  position: relative;
+  margin-top: 8px;
 }
 
-.login-label {
-  font-size: 0.95rem;
-  opacity: 0.9;
+/* big soft “sun disk” */
+#sunrise2 {
+  position: absolute;
+  left: 50%;
+  top: -140px;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  /* fade + glow */
+  background: radial-gradient(circle at 50% 40%,
+      #ffeaa0 0 160px,
+      #ffd76f 160px 260px,
+      #ffc456 260px 320px,
+      rgba(255,196,86,0.0) 330px 100%);
+  filter: drop-shadow(0 24px 60px rgba(255,164,62,.35));
+  z-index: 0;
+  /* hide the "sunrise2" text */
+  color: transparent;
+  overflow: hidden;
+  user-select: none;
 }
 
-.login-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d0d5dd;
-  border-radius: 12px;
-  background: #ffffff;
-  outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease;
+/* offset orange “petal” on the left */
+#sunrise1 {
+  position: absolute;
+  left: calc(50% - 290px);
+  top: 40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+      #ffae5e 0 40%,
+      #ff933c 60%,
+      #ff8a2f 100%);
+  filter: blur(0.3px) drop-shadow(0 16px 32px rgba(255,138,47,.25));
+  z-index: 0;
+  color: transparent;
+  user-select: none;
 }
+
+/* ===== Card ===== */
 .login-content {
-
-  /* position: absolute; */
-  border-top-left-radius: 50%; /* Adjust the value for desired roundness */
-  border-top-right-radius: 50%; /* Adjust the value for desired roundness */
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  background-color: #F2D479;;
-  padding: 2rem;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.login-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
-}
-
-/* Password row: input + show/hide button */
-.pw-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.toggle-btn {
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid #d0d5dd;
-  background: #fff;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background .15s ease, transform .15s ease;
-}
-.toggle-btn:hover  { background: #f8fafc; transform: translateY(-1px); }
-.toggle-btn:active { transform: translateY(0); }
-
-/* Primary action matches your other cards */
-.primary-btn {
+  position: relative !important;
+  z-index: 1; /* above sunrise */
+  margin: 0 auto;
   width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #0f172a;
-  background: #0f172a;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity .15s ease, transform .15s ease;
+  background: #ffffff !important;
+  border-radius: 14px !important;
+  padding: 26px 22px 22px !important;
+  /* gentle inner glow + shadow */
+  box-shadow:
+    0 24px 60px rgba(15,23,42,.10),
+    0 2px 0 rgba(255,255,255,.6) inset,
+    0 0 120px rgba(255, 209, 102, .18) inset;
 }
-.primary-btn:hover { transform: translateY(-1px); }
-.primary-btn:active { transform: translateY(0); opacity: .95; }
 
-/* Mode switch */
-.link-btn {
-  margin-top: 6px;
-  background: transparent;
-  border: none;
-  color: #0f172a;
+/* Center the section title like the mock */
+.login-content h2 {
+  margin: 6px auto 18px !important;
+  width: 100% !important;
+  text-align: center !important;
+  font-weight: 800 !important;
+}
+
+/* ===== Inputs ===== */
+/* target the plain inputs in your JSX */
+.login-content input[type="text"],
+.login-content input[type="password"] {
+  width: 100% !important;
+  height: 44px;
+  padding: 10px 12px !important;
+  border: 1px solid #e5e7eb !important;
+  background: #f1f5f9 !important;          /* soft gray like the mock */
+  border-radius: 10px !important;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+  font-size: 15px;
+}
+.login-content input:focus {
+  border-color: #c7d2fe !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
+  background: #eef2f7 !important;
+}
+
+/* labels spacing */
+.login-content label {
   font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
+  margin-top: 4px;
+  margin-bottom: 6px !important;
 }
 
-/* Errors */
-.error-text {
-  color: crimson;
-  margin: 6px 0 0;
+/* Password row layout already grid in your CSS; make the toggle look like an eye */
+.pw-row {
+  grid-template-columns: 1fr 44px !important;
 }
-form, h2 {
-  text-align: left;
-  margin: .5rem;
+.pw-row > button {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f1f5f9 center/20px 20px no-repeat;
+  cursor: pointer;
+  transition: transform .15s ease, background-color .15s ease;
+  /* hide the "Show/Hide" text, replace with icon via background */
+  font-size: 0;
+  /* eye icon (SVG data URI) */
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+  <path d='M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z'/>\
+  <circle cx='12' cy='12' r='3'/></svg>");
+}
+.pw-row > button:hover { transform: translateY(-1px); background-color: #edf1f6; }
+.pw-row > button:active { transform: translateY(0); }
+
+/* ===== Primary button (Login / Create account) ===== */
+.login-content form > button {
+  width: 100% !important;
+  height: 44px;
+  margin-top: 6px !important;
+  border-radius: 10px;
+  border: 0;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: .2px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f39b3c 0%, #f08d2f 50%, #ea7f22 100%);
+  box-shadow:
+    0 8px 20px rgba(240, 141, 47, .35),
+    0 1px 0 rgba(255,255,255,.5) inset;
+  transition: transform .12s ease, filter .12s ease;
+}
+.login-content form > button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+.login-content form > button:active { transform: translateY(0); }
+
+/* ===== Switch link under the form ===== */
+.login-content > button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 12px 0 !important;
+  color: #f08d2f !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+/* ===== Error text ===== */
+.error-text {
+  color: #dc2626 !important;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ===== Nice width for content align like mock ===== */
+.login-content form,
+.login-content h2 {
+  width: 92% !important; /* breathe on small card */
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* ===== Small card radius and shadow polish on very small screens ===== */
+@media (max-width: 420px) {
+  #sunrise2 { width: 560px; height: 560px; top: -120px; }
+  #sunrise1 { left: calc(50% - 230px); top: 60px; width: 180px; height: 180px; }
+  .login-content { border-radius: 12px !important; }
 }

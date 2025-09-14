@@ -56,9 +56,16 @@ export default function PersonalityQuiz({
   const goPrev = () => animateTo("left", index - 1);
 
   const submit = async () => {
-    // Turn {decisionStyle:"Logic", groupRole:"Leader", ...}
-    // into ["Logic","Leader",...], which matches backend StringListIn.selected
-    const selected = Object.values(answers).filter(Boolean);
+    // Build ["Question: Answer", ...] in quiz order using labels from personalityPages
+    const selected = [];
+    for (const p of pages) {
+      for (const f of p.fields) {
+        const v = answers[f.id];
+        if (v != null && v !== "") {
+          selected.push(`${f.label}: ${v}`);
+        }
+      }
+    }
 
     setSubmitting(true);
     try {
