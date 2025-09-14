@@ -1,8 +1,15 @@
+.content {
+    background-color: #F2D479; 
+    border-radius: 14px;
+
+}
+
 .home-root { 
   display: flex; 
   justify-content: center;
   align-items: column;
   flex-wrap: wrap;
+  
 }
 
 /* Inside the card */

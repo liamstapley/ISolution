@@ -19,18 +19,24 @@
   overflow: hidden;
 }
 
+.content {
+  display: grid;
+  justify-content: center;
+  /* align-content: center; */
+}
+
 /* logical page structure (used inside your QuizPage) */
 .page {
   width: 100%;
   max-width: 520px;      /* keep content narrower than the box */
-  margin: 0 auto;
+  /* margin: 0 auto; */
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;   /* center horizontally */
   justify-content: center;
-  gap: 20px;
   text-align: center;
+
 }
 
 .page-title {
@@ -38,6 +44,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
+  height: fit-content;
 }
 
 .field {
@@ -57,15 +64,18 @@
 .pill-row {
   display: flex;
   flex-wrap: wrap;       /* ✅ wrap so long rows don’t push out of the box */
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
 }
 
 .pill {
+  flex-shrink: 1;
+  /* flex-basis: 25%; */
+  /* flex-grow: 1; */
   border: 1px solid #d0d5dd;
   background: #fff;
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: .1rem 12px;
   font-size: 0.95rem;
   cursor: pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease;

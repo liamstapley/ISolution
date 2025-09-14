@@ -36,10 +36,11 @@ export default function FriendsCard({
                 {people.map((p) => (
                   <li key={p.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
-                      <img className="vol-logo" src={p.img} alt="" width="300px" height="300px"/> 
+                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
                       {/* Picture not working for some reason */}
                       {/* {a.org?.[0] ?? "V"} */}
                     </div>
+                    <div className="vol-name">{p.title}</div>
                     <div className="vol-name">{p.title}</div>
                     <div className="vol-meta">
                       <div className="vol-rating" aria-label={`${p.rating} out of 5 stars`}>
@@ -48,7 +49,10 @@ export default function FriendsCard({
                       </div>
                       <button className="signup-btn" onClick={() => connect(p)}>Connect</button>
 
+                      <button className="signup-btn" onClick={() => connect(p)}>Connect</button>
+
                     </div>
+
 
                   </li>
                 ))}

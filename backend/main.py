@@ -16,6 +16,10 @@ from schemas import (
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user
+from embeddings_service import embed_document, embed_query, event_text
+import json, os
+from ann_index import add_or_update as ann_add_or_update, rebuild as ann_rebuild, search as ann_search
+
 
 app = FastAPI(title="ISolution API")
 

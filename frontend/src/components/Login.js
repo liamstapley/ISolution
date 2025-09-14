@@ -44,13 +44,12 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ maxWidth: 380, margin: "80px auto", fontFamily: "system-ui" }}>
+    <div className="login-page" style={{ maxWidth: 380, margin: "80px auto", fontFamily: "system-ui" }}>
       <h1 className="login-title">
         Welcome to <span className="brand">ISolution</span>
       </h1>
-      <div id="sunrise-root">
-      <div id="sunrise1">sunrise1</div>
-      <div id="sunrise2">sunrise2</div>
+      {/* <div id="sunrise1">sunrise1</div>
+      <div id="sunrise2">sunrise2</div> */}
       <div className="login-content">
 
 
