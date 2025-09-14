@@ -40,6 +40,16 @@
   display: grid;
   gap: 12px;
   overflow: auto;
+  max-height: 100%; /* stay within stage height */
+  overflow-y: auto; /* vertical scroll bar when needed */
+  padding-right: 8px; /* small padding so scrollbar doesnâ€™t overlap */
+}
+.vol-list::-webkit-scrollbar {
+  width: 8px;
+}
+.vol-list::-webkit-scrollbar-thumb {
+  background: #cfd6e0;
+  border-radius: 4px;
 }
 
 /* individual card */
@@ -108,3 +118,17 @@
 }
 .signup-btn:hover { transform: translateY(-1px); }
 .signup-btn:active { transform: translateY(0); opacity: .9; }
+
+.stage, .box, .content { height: 100%; }
+.content { overflow: hidden; }          /* only the list should scroll */
+
+/* allow the grid child to shrink so it can scroll */
+.vol-page { min-height: 0; }
+.vol-list {
+  height: 100%;
+  min-height: 0;            /* <-- critical for grid children */
+  overflow-y: auto;
+  overflow-x: hidden;       /* kill sideways jiggle */
+  overscroll-behavior: contain;
+  touch-action: pan-y;      /* prioritize vertical gestures on touch */
+}
