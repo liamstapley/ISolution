@@ -3,11 +3,11 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, noload
-
+from ann_index import add_or_update as ann_add_or_update
 from db.database import Base, engine, get_db
 from db.models import User, Event, EventEmbedding, UserQueryEmbedding
 from schemas import (
@@ -99,6 +99,8 @@ def create_missing_embeddings() -> int:
                 )
                 db.add(ee)
                 created += 1
+                key = (ee.model_name, ee.task_type, ee.dim)
+                ann_add_or_update(key=key, dim=ee.dim, embeddings=[(ev.id, vec)])
                 if created % BATCH == 0:
                     db.commit()
             except Exception as e:
@@ -271,6 +273,12 @@ def create_event(
         )
         db.add(ee)
         db.commit()
+        key = (ee.model_name or "gemini-embedding-001", ee.task_type, ee.dim)
+        ann_add_or_update(
+            key=key,
+            dim=ee.dim,
+            embeddings=[(ee.event_id, json.loads(ee.vector))],
+        )
     except Exception as ex:
         print("auto-embed event failed:", ex)
 
@@ -396,6 +404,14 @@ def create_event_embedding(payload: EventEmbeddingCreate, db: Session = Depends(
         existing.dim = dim
         db.commit()
         db.refresh(existing)
+
+        from ann_index import add_or_update as ann_add_or_update
+        key = (existing.model_name, existing.task_type, existing.dim)
+        ann_add_or_update(
+            key=key,
+            dim=existing.dim,
+            embeddings=[(existing.event_id, payload.vector)],
+        )
         return existing
 
     ee = EventEmbedding(
@@ -539,25 +555,38 @@ def ann_recommendations(
     key = (uq.model_name, "RETRIEVAL_DOCUMENT", uq.dim)
     hits = ann_search(key=key, dim=uq.dim, query_vec=qvec, k=top_k)
 
+    # Optional: lazy warm the index if it’s cold/empty
+    if not hits:
+        rows = (
+            db.query(EventEmbedding)
+              .filter(
+                  EventEmbedding.model_name == uq.model_name,
+                  EventEmbedding.task_type == "RETRIEVAL_DOCUMENT",
+                  EventEmbedding.dim == uq.dim
+              ).all()
+        )
+        if rows:
+            items = [(r.event_id, _decode_vec(r.vector)) for r in rows]
+            ann_rebuild(key=key, dim=uq.dim, all_items=items)
+            hits = ann_search(key=key, dim=uq.dim, query_vec=qvec, k=top_k)
+
     if not hits:
         return []
 
     # 3) Fetch the corresponding events in hit order
-    event_ids = [lab for (lab, dist) in hits]
-    # Build a mapping id->rank to preserve ANN order
+    event_ids = [lab for (lab, _dist) in hits]
     rank = {eid: i for i, eid in enumerate(event_ids)}
-    # Distance map for raw cosine-based similarity (0..2 -> 1..0)
     dist_map = {lab: float(dist) for (lab, dist) in hits}
 
     events = db.query(Event).filter(Event.id.in_(event_ids)).all()
     events.sort(key=lambda e: rank.get(e.id, 1_000_000))
 
-    # Attach a raw similarity score in [0,1] via 1 - (d/2), no batch normalization
-    results = []
+    # 4) Map to EventOut and attach similarity (0..1)
+    results: List[EventOut] = []
     for e in events:
-        _d = dist_map.get(e.id, 2.0)
-        _sim = 1.0 - (_d / 2.0)            # map [0,2] distance -> [1,0] similarity
-        _sim = max(0.0, min(1.0, _sim))    # clamp just in case
+        d = dist_map.get(e.id, 2.0)
+        sim = 1.0 - (d / 2.0)
+        sim = max(0.0, min(1.0, sim))
         results.append(EventOut(
             id=e.id,
             title=e.title,
@@ -565,7 +594,10 @@ def ann_recommendations(
             src_url=e.src_url,
             starts_at=e.starts_at,
             ends_at=e.ends_at,
+            venue=e.venue,                # <- add back
             location=e.location,
+            latitude=e.latitude,          # <- add back
+            longitude=e.longitude,        # <- add back
             tags=_csv_to_list(e.tags),
             organizers=_csv_to_list(e.organizers),
             price_amount=e.price_amount,
@@ -578,11 +610,87 @@ def ann_recommendations(
             usernames_going=[u.username for u in e.attendees],
             created_at=e.created_at,
             updated_at=e.updated_at,
-            score=round(float(_sim), 6),
+            score=round(sim, 6),
         ))
     return results
 
+def _event_category(e: Event) -> str:
+    # If you later add Event.category, use that first.
+    hay = " ".join([
+        (e.source or ""), (e.venue or ""), (e.location or ""),
+        (e.organizers or ""), (e.tags or ""), (e.title or ""), (e.description or "")
+    ]).lower()
+    if "volunteer" in hay or "volunteering" in hay:
+        return "volunteering"
+    return "events"
 
+
+@app.get("/api/recommendations/ann/by_category", response_model=Dict[str, List[EventOut]])
+def ann_recommendations_by_category(
+    user_id: int = Query(...),
+    top_k: int = Query(5, ge=1, le=50),
+    overfetch: int = Query(5, ge=1, le=20),  # fetch more to have enough for each bucket
+    db: Session = Depends(get_db),
+):
+    # 1) user query vec
+    uq = db.query(UserQueryEmbedding).filter(UserQueryEmbedding.user_id == user_id).first()
+    if not uq:
+        raise HTTPException(status_code=404, detail="No user query embedding.")
+    qvec = _decode_vec(uq.vector)
+    key = (uq.model_name, "RETRIEVAL_DOCUMENT", uq.dim)
+
+    # 2) ANN search (overfetch)
+    k = top_k * overfetch
+    hits = ann_search(key=key, dim=uq.dim, query_vec=qvec, k=k)
+    if not hits:
+        return {"volunteering": [], "events": []}
+
+    event_ids = [lab for (lab, _d) in hits]
+    rank = {eid: i for i, eid in enumerate(event_ids)}
+    dist_map = {lab: float(d) for (lab, d) in hits}
+
+    # 3) fetch + order
+    events = db.query(Event).filter(Event.id.in_(event_ids)).all()
+    events.sort(key=lambda e: rank.get(e.id, 10**9))
+
+    # 4) bucketize + cap at top_k each
+    buckets: Dict[str, List[EventOut]] = {"volunteering": [], "events": []}
+    for e in events:
+        cat = _event_category(e)
+        if len(buckets[cat]) >= top_k:
+            continue
+        d = dist_map.get(e.id, 2.0)
+        sim = max(0.0, min(1.0, 1.0 - d / 2.0))
+        buckets[cat].append(EventOut(
+            id=e.id,
+            title=e.title,
+            description=e.description,
+            src_url=e.src_url,
+            starts_at=e.starts_at,
+            ends_at=e.ends_at,
+            venue=e.venue,
+            location=e.location,
+            latitude=e.latitude,
+            longitude=e.longitude,
+            tags=_csv_to_list(e.tags),
+            organizers=_csv_to_list(e.organizers),
+            price_amount=e.price_amount,
+            price_currency=e.price_currency,
+            people_cap=e.people_cap,
+            source=e.source,
+            evidence_urls=e.evidence_urls or [],
+            dedupe_id=e.dedupe_id,
+            num_going=len(e.attendees),
+            usernames_going=[u.username for u in e.attendees],
+            created_at=e.created_at,
+            updated_at=e.updated_at,
+            score=round(sim, 6),
+        ))
+        # Early exit if both buckets filled
+        if all(len(v) >= top_k for v in buckets.values()):
+            break
+
+    return buckets
 
 @app.post("/api/ann/rebuild")
 def rebuild_ann_index(

@@ -7,7 +7,7 @@ import hnswlib
 
 IndexKey = Tuple[str, str, int]  # (model_name, task_type, dim)
 
-# Tune these as you like
+# Tuneable
 _DEFAULT_M = 32
 _DEFAULT_EF_CONSTRUCTION = 200
 _DEFAULT_EF = 128
@@ -42,6 +42,7 @@ class _Index:
             self.index.set_ef(_DEFAULT_EF)
             # hnswlib doesn’t persist an easy label list; we rebuild lazily as we add.
             # (We’ll keep labels in-memory across this process; safe enough for dev.)
+            self.labels = set(self.index.get_ids_list())
         else:
             self._init_new(expected_capacity)
 
@@ -155,7 +156,20 @@ def search(
         return []
     q = np.asarray([query_vec], dtype=np.float32)
     with ix.lock:
+        # NEW: scale ef with k for better recall
+        ix.index.set_ef(max(_DEFAULT_EF, k * 2))
         labels, distances = ix.index.knn_query(q, k=min(k, max(1, len(ix.labels))))
     labs = labels[0].tolist()
     dists = distances[0].tolist()
     return list(zip([int(x) for x in labs], [float(d) for d in dists]))
+
+def remove(key, dim, label: int) -> bool:
+    ix = _get_index(key, dim, 0)
+    with ix.lock:
+        try:
+            ix.index.mark_deleted(int(label))
+            ix.labels.discard(int(label))
+            ix.save()
+            return True
+        except Exception:
+            return False
