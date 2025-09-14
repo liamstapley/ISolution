@@ -1,11 +1,14 @@
 import React from "react";
 import "./TextSwiper.css";  // reuses .stage, .box, .content (card look)
 import "./VolunteerCard.css";   // reuses list/card styles
+import D1 from "./images/dog1.jpg";
+import D2 from "./images/dog2.webp";
+import D3 from "./images/dog3.jpg";
 
 const DEFAULT_FRIENDS = [
-  { id: "liam",   title: "Liam Stapley",     org: "PFP", rating: 5 },
-  { id: "frank",  title: "Frank Murphy",     org: "PFP", rating: 4 },
-  { id: "jonathan", title: "Jonathan Perry", org: "PFP", rating: 4 },
+  { id: "Liam",   title: "Liam Stapley",     org: "PFP", rating: 5, img: D1 },
+  { id: "Steve",  title: "Steve Blues",     org: "PFP", rating: 4, img: D2 },
+  { id: "Jonathan", title: "Jonathan Perry", org: "PFP", rating: 4, img: D3 },
 ];
 
 export default function FriendsCard({
