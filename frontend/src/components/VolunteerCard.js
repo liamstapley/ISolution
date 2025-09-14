@@ -40,7 +40,7 @@ export default function VolunteerCard({
                 {activities.map((a) => (
                   <li key={a.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
-                      <img className="vol-logo" src={a.img} alt="" width="300px" height="300px"/> 
+                      <img className="vol-logo" src={a.img} alt=""/> 
                       {/* Picture not working for some reason */}
                       {/* {a.org?.[0] ?? "V"} */}
                     </div>
