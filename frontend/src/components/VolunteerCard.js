@@ -1,11 +1,15 @@
 import React from "react";
 import "./TextSwiper.css";   // reuses .stage, .box, .content styles
 import "./VolunteerCard.css";
+import AnimalPng from "./images/Baltimore-Animal-Services.jpeg"
+import HomePng from "./images/Elevated-Home.png"
+import VanqPng from "./images/Vanquish-Litterzilla-Clean.png"
 
 const DEFAULT_ACTIVITIES = [
-  { id: "Social",     title: "Crab Feast for Haiti",        org: "High Hopes for Haiti", rating: 4 },
-  { id: "Social",     title: "Collage Making",       org: "Charmers Club",      rating: 3 },
-  { id: "Social",     title: "The Playlist Set",  org: "Mariska Moves",    rating: 4 },
+  { id: "Volunteer",     title: "Dog Walker",        org: "Baltimore County Animal Services", rating: 4, img: AnimalPng },
+  { id: "Volunteer",     title: "Cat Caretaker",       org: "Baltimore County Animal Services",      rating: 3, img: AnimalPng },
+  { id: "Volunteer",     title: "Building and Repairing Homes",  org: "Adopt A Home",    rating: 4, img: HomePng },
+  {id: "Volunteer",     title: "Neighborhood Cleanup",       org: "Clean Green Baltimore County",      rating: 5, img: VanqPng },
 ];
 
 export default function VolunteerCard({
@@ -36,7 +40,7 @@ export default function VolunteerCard({
                 {activities.map((a) => (
                   <li key={a.id} className="vol-card">
                     <div className="vol-logo-div" aria-hidden="true">
-                      <img className="vol-logo" src="sample-logo.png" alt="" width="300px" height="300px"/> 
+                      <img className="vol-logo" src={a.img} alt="" width="300px" height="300px"/> 
                       {/* Picture not working for some reason */}
                       {/* {a.org?.[0] ?? "V"} */}
                     </div>

@@ -7,15 +7,15 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import Base, engine, get_db
-from .models import User, Event, EventEmbedding, UserQueryEmbedding
-from .schemas import (
+from database import Base, engine, get_db
+from models import User, Event, EventEmbedding, UserQueryEmbedding
+from schemas import (
     UserCreate, Login, Token, UserOut,
     EventCreate, EventOut,
     EventEmbeddingCreate, EventEmbeddingOut,
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
-from .auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, create_access_token, get_current_user
 
 app = FastAPI(title="ISolution API")
 
