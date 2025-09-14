@@ -1,12 +1,12 @@
 # main.py
 from __future__ import annotations
-
+import logging
 from contextlib import asynccontextmanager
 import json
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, noload
 
 from db.database import Base, engine, get_db
 from db.models import User, Event, EventEmbedding, UserQueryEmbedding
@@ -17,17 +17,107 @@ from schemas import (
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user
-from embeddings_service import embed_document, event_text
+from embeddings import embed_document, event_text, user_text
 import os
 from ann_index import add_or_update as ann_add_or_update, rebuild as ann_rebuild, search as ann_search
+
+from sqlalchemy.orm import Session, noload
+import os, json
+
+logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+logger = logging.getLogger("ISolution")
+
+def create_missing_embeddings() -> int:
+    model_name = os.getenv("GEMINI_EMBED_MODEL") or "gemini-embedding-001"
+    BATCH = 100
+    created = 0
+
+    with Session(engine) as db:
+        # ---- Pass 1: USERS missing a query embedding ----
+        uq = (
+            db.query(User)
+              .outerjoin(UserQueryEmbedding, UserQueryEmbedding.user_id == User.id)
+              .filter(UserQueryEmbedding.id.is_(None))
+              .options(noload(User.attending), noload(User.query_embedding))
+              .execution_options(stream_results=True)
+        )
+
+        for user in uq.yield_per(200):
+            try:
+                text = user_text(user).strip() or "user: no details"
+                vec = embed_document(text)
+                ue = UserQueryEmbedding(
+                    user_id=user.id,
+                    vector=json.dumps(vec),
+                    dim=len(vec),
+                    model_name=model_name,
+                    task_type="RETRIEVAL_QUERY",
+                )
+                db.add(ue)
+                created += 1
+                if created % BATCH == 0:
+                    db.commit()
+            except Exception as e:
+                print(f"[user {getattr(user,'id',None)}] auto-embed failed:", e)
+
+        db.commit()  # flush remainder from users
+
+        # ---- Pass 2: EVENTS missing an embedding ----
+        eq = (
+            db.query(Event)
+              .outerjoin(EventEmbedding, EventEmbedding.event_id == Event.id)
+              .filter(EventEmbedding.id.is_(None))
+              .options(noload(Event.attendees), noload(Event.embedding))
+              .execution_options(stream_results=True)
+        )
+
+        for ev in eq.yield_per(200):
+            try:
+                text = event_text(
+                    ev.title,
+                    ev.tags or "",
+                    ev.organizers or "",
+                    ev.starts_at,
+                    ev.location,
+                    ev.description or "",
+                ).strip()
+
+                if not text:
+                    # Extremely unlikely given required fields, but keep a fallback.
+                    text = f"title: {ev.title}\nwhere: {ev.location}\nwhen: {ev.starts_at}"
+
+                vec = embed_document(text)
+                ee = EventEmbedding(
+                    event_id=ev.id,
+                    vector=json.dumps(vec),
+                    dim=len(vec),
+                    model_name=model_name,
+                    task_type="RETRIEVAL_DOCUMENT",
+                )
+                db.add(ee)
+                created += 1
+                if created % BATCH == 0:
+                    db.commit()
+            except Exception as e:
+                print(f"[event {getattr(ev,'id',None)}] auto-embed failed:", e)
+
+        db.commit()  # flush remainder from events
+        return created
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from db import models
-    print("Application startup.")
+    logger.info("Application startup.")
+    # TODO: Scan database, check if vectors exist for each user, event, if not, 
+    # call Sir gemini to do it
     Base.metadata.create_all(bind=engine)
+    created = create_missing_embeddings()
+    logger.info("Created %d embeddings at startup.", created)
     yield
-    print("Shutting down database.")
+    logger.info("Shutting down backend.")
 
 app = FastAPI(title="ISolution API", lifespan=lifespan)
 

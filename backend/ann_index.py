@@ -1,141 +1,145 @@
 # ann_index.py
 from __future__ import annotations
-import os, json, threading
-from pathlib import Path
-from typing import Iterable, List, Tuple, Optional, Literal
+from typing import Dict, Tuple, List, Iterable
+import os, threading
 import numpy as np
 import hnswlib
 
-IndexKey = Tuple[str, Literal["RETRIEVAL_DOCUMENT"], int]  # (model_name, task_type, dim)
+IndexKey = Tuple[str, str, int]  # (model_name, task_type, dim)
 
-# Where to persist indices
-INDEX_DIR = Path(os.getenv("ANN_INDEX_DIR", "./indices"))
-INDEX_DIR.mkdir(parents=True, exist_ok=True)
+# Tune these as you like
+_DEFAULT_M = 32
+_DEFAULT_EF_CONSTRUCTION = 200
+_DEFAULT_EF = 128
 
-# In-memory registry of loaded indices + a lock
-_registry = {}
-_lock = threading.Lock()
+_DATA_DIR = os.environ.get("ANN_STORE_DIR", ".ann_store")
+os.makedirs(_DATA_DIR, exist_ok=True)
 
-def _paths(key: IndexKey):
-    model, task, dim = key
-    stem = f"{model}__{task}__{dim}"
-    return (INDEX_DIR / f"{stem}.bin", INDEX_DIR / f"{stem}.meta.json")
+def _fname(key: IndexKey) -> str:
+    m, t, d = key
+    safe = f"{m}__{t}__{d}".replace("/", "_")
+    return os.path.join(_DATA_DIR, f"{safe}.hnsw")
 
-def _save_meta(meta_path: Path, space: str, ef: int, M: int):
-    meta_path.write_text(json.dumps({"space": space, "ef": ef, "M": M}))
+class _Index:
+    def __init__(self, space: str, dim: int, key: IndexKey):
+        self.space = space
+        self.dim = dim
+        self.key = key
+        self.path = _fname(key)
+        self.lock = threading.RLock()
+        self.index = None          # type: hnswlib.Index
+        self.labels = set()        # track labels present
 
-def _load_meta(meta_path: Path):
-    return json.loads(meta_path.read_text())
+    def _init_new(self, max_elements: int):
+        self.index = hnswlib.Index(space=self.space, dim=self.dim)
+        self.index.init_index(max_elements=max(max_elements, 1), M=_DEFAULT_M, ef_construction=_DEFAULT_EF_CONSTRUCTION)
+        self.index.set_ef(_DEFAULT_EF)
 
-def _ensure_loaded(key: IndexKey, dim: int, space="cosine", ef_construction=200, M=32, allow_create=True):
-    """Load an index into memory if present, else create a new one if allow_create."""
-    with _lock:
-        if key in _registry:
-            return _registry[key]
-
-        bin_path, meta_path = _paths(key)
-        idx = hnswlib.Index(space=space, dim=dim)
-        if bin_path.exists() and meta_path.exists():
-            meta = _load_meta(meta_path)
-            idx.load_index(str(bin_path), max_elements=0)  # 0 means read from file
-            # Set a reasonable ef for queries
-            idx.set_ef(64)
+    def _load_or_new(self, expected_capacity: int):
+        if os.path.exists(self.path):
+            self.index = hnswlib.Index(space=self.space, dim=self.dim)
+            self.index.load_index(self.path, max_elements=expected_capacity or 1)
+            self.index.set_ef(_DEFAULT_EF)
+            # hnswlib doesn’t persist an easy label list; we rebuild lazily as we add.
+            # (We’ll keep labels in-memory across this process; safe enough for dev.)
         else:
-            if not allow_create:
-                return None
-            # Initialize empty index with capacity; we can grow later
-            # Choose a generous capacity to reduce rebuilds; you can tune this.
-            idx.init_index(max_elements=50_000, ef_construction=ef_construction, M=M)
-            idx.set_ef(64)
-            _save_meta(meta_path, space, 64, M)
-            # Persist empty index
-            idx.save_index(str(bin_path))
+            self._init_new(expected_capacity)
 
-        _registry[key] = idx
-        return idx
+    def save(self):
+        if self.index is not None:
+            self.index.save_index(self.path)
+
+# Global registry of indices
+_REGISTRY: Dict[IndexKey, _Index] = {}
+_REG_LOCK = threading.RLock()
+
+def _get_index(key: IndexKey, dim: int, capacity_hint: int = 0) -> _Index:
+    with _REG_LOCK:
+        ix = _REGISTRY.get(key)
+        if ix is None:
+            ix = _Index(space="cosine", dim=dim, key=key)
+            ix._load_or_new(capacity_hint)
+            _REGISTRY[key] = ix
+        return ix
+
+def _ensure_capacity(ix: _Index, need: int):
+    # hnswlib can grow via resize_index
+    cur_max = ix.index.get_max_elements()
+    cur_cnt = ix.index.get_current_count()
+    if cur_cnt + need > cur_max:
+        ix.index.resize_index(max(cur_cnt + need, int(cur_max * 1.5) + 64))
 
 def add_or_update(
     key: IndexKey,
     dim: int,
-    embeddings: Iterable[Tuple[int, List[float]]],  # (label=event_id, vector)
-):
+    embeddings: Iterable[Tuple[int, List[float]]],
+) -> int:
     """
-    Upsert by label (event_id).
-    For hnswlib: to update, delete the label then add again.
+    Upsert items into the index. Each item is (label, vector).
+    Returns how many items were added.
     """
-    idx = _ensure_loaded(key, dim)
-    if idx is None:
-        raise RuntimeError("Index not loaded and creation not allowed.")
-
-    labels = []
-    vecs = []
-    for label, vec in embeddings:
-        v = np.asarray(vec, dtype=np.float32)
-        if v.shape[0] != dim:
-            raise ValueError(f"Vector dim {v.shape[0]} != expected {dim}")
-        labels.append(label)
-        vecs.append(v)
+    ix = _get_index(key, dim, capacity_hint=0)
+    labels, vecs = [], []
+    for lab, vec in embeddings:
+        if len(vec) != dim:
+            continue
+        labels.append(int(lab))
+        vecs.append(vec)
 
     if not labels:
-        return
+        return 0
 
-    labels_np = np.array(labels, dtype=np.int64)
-    vecs_np = np.vstack(vecs)
+    with ix.lock:
+        _ensure_capacity(ix, len(labels))
+        # Normalize input shape
+        arr = np.array(vecs, dtype=np.float32)
+        labs = np.array(labels, dtype=np.int64)
 
-    # delete existing labels (if present)
-    try:
-        idx.mark_deleted_multi(labels_np)
-    except Exception:
-        # Some versions don’t expose multi-delete. Fall back to single deletes.
-        for l in labels:
+        # If a label already exists, mark it deleted (so new insert replaces it)
+        # hnswlib supports replace_deleted=True in add_items to reuse deleted slots.
+        # We’ll do a best-effort delete for labels we’ve seen in this process.
+        to_del = [lab for lab in labels if lab in ix.labels]
+        for lab in to_del:
             try:
-                idx.mark_deleted(l)
-            except Exception:
-                pass
+                ix.index.mark_deleted(lab)
+            except RuntimeError:
+                pass  # was not present; continue
 
-    # Grow capacity if needed
-    try:
-        idx.add_items(vecs_np, labels_np, replace_deleted=True)
-    except RuntimeError as e:
-        # Usually means capacity too low; grow and retry
-        cur_cap = idx.get_max_elements()
-        new_cap = max(cur_cap * 2, cur_cap + len(labels) * 4)
-        idx.resize_index(new_cap)
-        idx.add_items(vecs_np, labels_np, replace_deleted=True)
-
-    # Persist
-    bin_path, _ = _paths(key)
-    idx.save_index(str(bin_path))
+        ix.index.add_items(arr, labs, replace_deleted=True)
+        ix.labels.update(labels)
+        ix.save()
+        return len(labels)
 
 def rebuild(
     key: IndexKey,
     dim: int,
     all_items: Iterable[Tuple[int, List[float]]],
-    space="cosine",
-    ef_construction=200,
-    M=32,
-):
-    """Rebuild from scratch (useful if you change params or want a clean slate)."""
-    with _lock:
-        # Fresh index
-        idx = hnswlib.Index(space=space, dim=dim)
-        items = list(all_items)
-        max_elements = max(1000, len(items) * 2)
-        idx.init_index(max_elements=max_elements, ef_construction=ef_construction, M=M)
-        idx.set_ef(64)
+) -> int:
+    """
+    Rebuilds the index from scratch with all given items.
+    """
+    items = [(int(lab), vec) for (lab, vec) in all_items if len(vec) == dim]
+    labels = [lab for lab, _ in items]
+    if not items:
+        # Create empty index so subsequent upserts work
+        ix = _get_index(key, dim, capacity_hint=1)
+        with ix.lock:
+            ix._init_new(max_elements=1)
+            ix.labels = set()
+            ix.save()
+        return 0
 
-        if items:
-            labels_np = np.array([lab for lab, _ in items], dtype=np.int64)
-            vecs_np = np.vstack([np.asarray(v, dtype=np.float32) for _, v in items])
-            idx.add_items(vecs_np, labels_np)
+    arr = np.array([vec for _, vec in items], dtype=np.float32)
+    labs = np.array(labels, dtype=np.int64)
 
-        # Persist
-        bin_path, meta_path = _paths(key)
-        idx.save_index(str(bin_path))
-        _save_meta(meta_path, space, 64, M)
-
-        _registry[key] = idx
-        return len(items)
+    ix = _get_index(key, dim, capacity_hint=len(items))
+    with ix.lock:
+        ix._init_new(max_elements=len(items))
+        ix.index.add_items(arr, labs)
+        ix.index.set_ef(_DEFAULT_EF)
+        ix.labels = set(labels)
+        ix.save()
+    return len(items)
 
 def search(
     key: IndexKey,
@@ -143,38 +147,15 @@ def search(
     query_vec: List[float],
     k: int = 10,
 ) -> List[Tuple[int, float]]:
-    idx = _ensure_loaded(key, dim, allow_create=False)
-    if idx is None:
+    """
+    Returns list of (label, distance) with hnswlib cosine space (0..2, lower is closer).
+    """
+    ix = _get_index(key, dim, capacity_hint=0)
+    if ix.index is None or not ix.labels:
         return []
-
-    q = np.asarray(query_vec, dtype=np.float32)
-    if q.shape[0] != dim:
-        raise ValueError(f"Query dim {q.shape[0]} != expected {dim}")
-
-    size = idx.get_current_count()
-    if size <= 0:
-        return []
-
-    # hnswlib cannot return more neighbors than exist (reliably) in tiny graphs
-    k_eff = min(k, size)
-
-    # Set ef defensively: at least 4*k, but also reasonable upper bound
-    try:
-        idx.set_ef(max(64, min(1024, 4 * k_eff)))
-        labels, dists = idx.knn_query(q, k=k_eff)
-    except RuntimeError:
-        # Retry with a much higher ef
-        idx.set_ef(max(128, min(2048, 8 * k_eff)))
-        labels, dists = idx.knn_query(q, k=k_eff)
-
+    q = np.asarray([query_vec], dtype=np.float32)
+    with ix.lock:
+        labels, distances = ix.index.knn_query(q, k=min(k, max(1, len(ix.labels))))
     labs = labels[0].tolist()
-    ds   = dists[0].tolist()
-    # Filter out hnswlib's -1 placeholders if any
-    out = [(int(l), float(d)) for l, d in zip(labs, ds) if l is not None and int(l) >= 0]
-    return out
-
-
-# ann_index.py (add this near the top-level helpers)
-def index_exists(key: IndexKey) -> bool:
-    bin_path, meta_path = _paths(key)
-    return bin_path.exists() and meta_path.exists()
+    dists = distances[0].tolist()
+    return list(zip([int(x) for x in labs], [float(d) for d in dists]))

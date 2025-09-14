@@ -93,6 +93,8 @@ class Event(Base):
         lazy="joined",
     )
 
+    embedding = relationship("EventEmbedding", back_populates="event", uselist=False, cascade="all, delete-orphan", lazy="selectin")
+
 # Helpful indexes for filtering/sorting (SQLite supports basic indexes)
 Index("ix_events_starts_at", Event.starts_at)
 Index("ix_events_lat_lon", Event.latitude, Event.longitude)
@@ -105,7 +107,7 @@ Index("ix_events_source", Event.source)
 class EventEmbedding(Base):
     __tablename__ = "event_embeddings"
     id = Column(Integer, primary_key=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, unique=True, index=True)
 
     # Store vectors as bytes for tests (e.g., numpy.ndarray.tobytes()).
     # In Postgres you’d use pgvector; in SQLite you can keep bytes and search via FAISS in-memory.
@@ -116,11 +118,9 @@ class EventEmbedding(Base):
     model_name = Column(String, nullable=False)   # e.g., "gemini-embed-text"
     task_type  = Column(String, nullable=False)   # "RETRIEVAL_DOCUMENT"
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    __table_args__ = (
-        UniqueConstraint("event_id", "model_name", "task_type", name="uq_event_model_task"),
-    )
+    event = relationship("Event", back_populates="embedding")
 
 
 class UserQueryEmbedding(Base):
@@ -136,6 +136,6 @@ class UserQueryEmbedding(Base):
     model_name = Column(String, nullable=False)   # "gemini-embed-text"
     task_type  = Column(String, nullable=False)   # "RETRIEVAL_QUERY"
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="query_embedding")
