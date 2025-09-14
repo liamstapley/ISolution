@@ -7,8 +7,9 @@ import HenHacks from "./images/HenHacks.png";
 
 const DEFAULT_CAREERS = [
   { id: "Career",    title: "HenHacks",         org: "University of Delaware", rating: 5, img: HenHacks },
+  { id: "Career",   title: "HopHacks Hackathon",     org: "Hopkins",    rating: 5, img: HopHacks },
   { id: "Career", title: "Climate Career Fair",    org: "UD Careers", rating: 4, img: Fair },
-  { id: "Career",   title: "HopHacks Hackathon",     org: "Hopkins",    rating: 3, img: HopHacks },
+  
   
 ];
 
