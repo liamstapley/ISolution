@@ -15,7 +15,11 @@ from .schemas import (
     EventEmbeddingCreate, EventEmbeddingOut,
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
-from .auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, create_access_token, get_current_user
+from embeddings_service import embed_document, embed_query, event_text
+import json, os
+from ann_index import add_or_update as ann_add_or_update, rebuild as ann_rebuild, search as ann_search
+
 
 app = FastAPI(title="ISolution API")
 
@@ -46,7 +50,6 @@ def _list_to_csv(lst: Optional[List[str]]) -> Optional[str]:
     if lst is None:
         return None
     return ",".join([x.strip() for x in lst if str(x).strip()])
-
 
 # ---------------------------
 # health
@@ -155,6 +158,27 @@ def create_event(
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    try:
+        text = event_text(
+            ev.title,
+            ev.tags or "",
+            ev.organizers or "",
+            ev.starts_at,
+            ev.location,
+            ev.description or "",
+        )
+        vec = embed_document(text)
+        ee = EventEmbedding(
+            event_id=ev.id,
+            vector=json.dumps(vec),
+            dim=len(vec),
+            model_name=os.getenv("GEMINI_EMBED_MODEL"),
+            task_type="RETRIEVAL_DOCUMENT",
+        )
+        db.add(ee)
+        db.commit()
+    except Exception as ex:
+        print("auto-embed event failed:", ex)
 
     return EventOut(
         id=ev.id,
@@ -244,6 +268,8 @@ def _decode_vec(s: str) -> List[float]:
     return json.loads(s)
 
 def _cosine(a: List[float], b: List[float]) -> float:
+    # Using the cos dot product formula to compare similarity of the vectors
+    # based on theta
     if not a or not b or len(a) != len(b):
         return 0.0
     import math
@@ -289,6 +315,14 @@ def create_event_embedding(payload: EventEmbeddingCreate, db: Session = Depends(
     db.add(ee)
     db.commit()
     db.refresh(ee)
+    # Build the index key from the embedding’s meta:
+    key = (ee.model_name, ee.task_type, ee.dim)
+
+    # Upsert this single vector into ANN with label = event_id
+    ann_add_or_update(
+        key=key,
+        dim=ee.dim,
+        embeddings=[(ee.event_id, _decode_vec(ee.vector))],)
     return ee
 
 @app.post("/api/embeddings/user", response_model=UserQueryEmbeddingOut)
@@ -395,6 +429,91 @@ def test_recommendations(
             updated_at=e.updated_at,
         ))
     return results
+
+@app.get("/api/recommendations/ann", response_model=List[EventOut])
+def ann_recommendations(
+    user_id: int = Query(...),
+    top_k: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    # 1) Load the user query vector
+    uq = db.query(UserQueryEmbedding).filter(UserQueryEmbedding.user_id == user_id).first()
+    if not uq:
+        raise HTTPException(status_code=404, detail="No user query embedding. POST /api/embeddings/user first.")
+    qvec = _decode_vec(uq.vector)
+
+    # 2) Search ANN with the same model/task/dim
+    key = (uq.model_name, "RETRIEVAL_DOCUMENT", uq.dim)
+    hits = ann_search(key=key, dim=uq.dim, query_vec=qvec, k=top_k)
+
+    if not hits:
+        return []
+
+    # 3) Fetch the corresponding events in hit order
+    event_ids = [lab for (lab, dist) in hits]
+    # Build a mapping id->rank to preserve ANN order
+    rank = {eid: i for i, eid in enumerate(event_ids)}
+    # Distance map for raw cosine-based similarity (0..2 -> 1..0)
+    dist_map = {lab: float(dist) for (lab, dist) in hits}
+
+    events = db.query(Event).filter(Event.id.in_(event_ids)).all()
+    events.sort(key=lambda e: rank.get(e.id, 1_000_000))
+
+    # Attach a raw similarity score in [0,1] via 1 - (d/2), no batch normalization
+    results = []
+    for e in events:
+        _d = dist_map.get(e.id, 2.0)
+        _sim = 1.0 - (_d / 2.0)            # map [0,2] distance -> [1,0] similarity
+        _sim = max(0.0, min(1.0, _sim))    # clamp just in case
+        results.append(EventOut(
+            id=e.id,
+            title=e.title,
+            description=e.description,
+            apply_url=e.apply_url,
+            starts_at=e.starts_at,
+            ends_at=e.ends_at,
+            location=e.location,
+            tags=_csv_to_list(e.tags),
+            organizers=_csv_to_list(e.organizers),
+            price_amount=e.price_amount,
+            price_currency=e.price_currency,
+            people_cap=e.people_cap,
+            source=e.source,
+            evidence_urls=e.evidence_urls or [],
+            dedupe_id=e.dedupe_id,
+            num_going=len(e.attendees),
+            usernames_going=[u.username for u in e.attendees],
+            created_at=e.created_at,
+            updated_at=e.updated_at,
+            score=round(float(_sim), 6),
+        ))
+    return results
+
+
+
+@app.post("/api/ann/rebuild")
+def rebuild_ann_index(
+    model_name: str = Query(...),
+    task_type: str = Query("RETRIEVAL_DOCUMENT"),
+    dim: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(EventEmbedding)
+        .filter(
+            EventEmbedding.model_name == model_name,
+            EventEmbedding.task_type == task_type,
+            EventEmbedding.dim == dim
+        )
+        .all()
+    )
+    items = []
+    for r in rows:
+        items.append((r.event_id, _decode_vec(r.vector)))
+
+    key = (model_name, task_type, dim)
+    count = ann_rebuild(key=key, dim=dim, all_items=items)
+    return {"ok": True, "count": count}
 
 @app.post("/api/profile/quiz")
 def save_quiz_answers(
