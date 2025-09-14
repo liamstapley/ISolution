@@ -1,14 +1,15 @@
 # main.py
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import json
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from database import Base, engine, get_db
-from models import User, Event, EventEmbedding, UserQueryEmbedding
+from db.database import Base, engine, get_db
+from db.models import User, Event, EventEmbedding, UserQueryEmbedding
 from schemas import (
     UserCreate, Login, Token, UserOut,
     EventCreate, EventOut,
@@ -16,12 +17,19 @@ from schemas import (
     UserQueryEmbeddingCreate, UserQueryEmbeddingOut, QuizAnswersIn, StringListIn
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user
-from embeddings_service import embed_document, embed_query, event_text
-import json, os
+from embeddings_service import embed_document, event_text
+import os
 from ann_index import add_or_update as ann_add_or_update, rebuild as ann_rebuild, search as ann_search
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from db import models
+    print("Application startup.")
+    Base.metadata.create_all(bind=engine)
+    yield
+    print("Shutting down database.")
 
-app = FastAPI(title="ISolution API")
+app = FastAPI(title="ISolution API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,10 +43,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Create tables (simple dev setup)
-Base.metadata.create_all(bind=engine)
-
 
 # ---------------------------
 # helpers: CSV <-> list
@@ -86,7 +90,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
 
     return UserOut(
-        id=user.id,
+        id=getattr(user, "id"),
         username=user.username,
         name=user.name,
         age=user.age,
@@ -140,7 +144,7 @@ def create_event(
     ev = Event(
         title=data.title,
         description=data.description,
-        apply_url=data.apply_url,
+        src_url=data.src_url,
         starts_at=data.starts_at,
         ends_at=data.ends_at,
         venue=data.venue,
@@ -184,7 +188,7 @@ def create_event(
         id=ev.id,
         title=ev.title,
         description=ev.description,
-        apply_url=ev.apply_url,
+        src_url=ev.src_url,
         starts_at=ev.starts_at,
         ends_at=ev.ends_at,
         venue=ev.venue,
@@ -214,7 +218,7 @@ def list_events(db: Session = Depends(get_db)):
             id=e.id,
             title=e.title,
             description=e.description,
-            apply_url=e.apply_url,
+            src_url=e.src_url,
             starts_at=e.starts_at,
             ends_at=e.ends_at,
             venue=e.venue,
@@ -253,7 +257,6 @@ def rsvp(
     ev.attendees.append(current)
     db.commit()
     return {"ok": True, "event_id": event_id}
-
 
 # ---------------------------
 # embeddings (simple test endpoints)
@@ -408,7 +411,7 @@ def test_recommendations(
             id=e.id,
             title=e.title,
             description=e.description,
-            apply_url=e.apply_url,
+            src_url=e.src_url,
             starts_at=e.starts_at,
             ends_at=e.ends_at,
             venue=e.venue,
@@ -469,7 +472,7 @@ def ann_recommendations(
             id=e.id,
             title=e.title,
             description=e.description,
-            apply_url=e.apply_url,
+            src_url=e.src_url,
             starts_at=e.starts_at,
             ends_at=e.ends_at,
             location=e.location,

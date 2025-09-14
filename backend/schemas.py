@@ -75,7 +75,7 @@ class EventCreate(BaseModel):
     # Core
     title: str
     description: Optional[str] = None
-    apply_url: Optional[str] = None
+    src_url: Optional[str] = None
 
     # Time (required)
     starts_at: str                               # ISO 8601 with tz offset, e.g. "2025-09-13T18:00:00-04:00"
@@ -112,7 +112,7 @@ class EventOut(BaseModel):
     # Core
     title: str
     description: Optional[str] = None
-    apply_url: Optional[str] = None
+    src_url: Optional[str] = None
 
     # Time
     starts_at: str

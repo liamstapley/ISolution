@@ -25,7 +25,7 @@ TZ = ZoneInfo("America/New_York")
 COLS = {
     "title": "Title",
     "description": "Description",
-    "src_url": "Source URL",         # was apply_url → now src_url
+    "src_url": "Source",         # was apply_url → now src_url
     "date": "Date",
     "start_time": "Start Time",
     "end_time": "End Time",
@@ -45,11 +45,8 @@ COLS = {
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
 sys.path.append(ROOT)
 
-from database import SessionLocal, engine
-from models import Event, Base  # Event has: src_url, starts_at/ends_at (ISO strings), evidence_urls (JSON/list)
-
-# Ensure tables exist in the target DB file
-Base.metadata.create_all(bind=engine)
+from db.database import SessionLocal, engine
+from db.models import Event, Base  # Event has: src_url, starts_at/ends_at (ISO strings), evidence_urls (JSON/list)
 
 # ------------------------------------------------------
 # Helpers

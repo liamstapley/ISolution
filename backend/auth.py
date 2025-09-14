@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from passlib.hash import bcrypt
 from sqlalchemy.orm import Session
-from database import get_db
-from models import User
+from db.database import get_db
+from db.models import User
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 ALGO = "HS256"
